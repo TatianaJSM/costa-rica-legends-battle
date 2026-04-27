@@ -1,0 +1,58 @@
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: Arial, Helvetica, sans-serif;
+  background: #070707;
+  color: #f5f5f5;
+}
+
+button {
+  font-family: inherit;
+}
+
+.app {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 2rem;
+  background:
+    radial-gradient(circle at top, rgba(130, 20, 20, 0.35), transparent 35%),
+    linear-gradient(180deg, #111, #030303);
+}
+
+.hero {
+  width: min(900px, 100%);
+  text-align: center;
+  padding: 3rem;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(0, 0, 0, 0.55);
+  box-shadow: 0 20px 70px rgba(0, 0, 0, 0.8);
+}
+
+.eyebrow {
+  color: #c9a15b;
+  text-transform: uppercase;
+  letter-spacing: 0.22em;
+  font-size: 0.8rem;
+}
+
+h1 {
+  margin: 0;
+  font-size: clamp(2.3rem, 7vw, 6rem);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.description {
+  color: #d7d7d7;
+  font-size: 1.2rem;
+  line-height: 1.6;
+}
+
+.description.small {
+  color: #c9a15b;
+  font-size: 0.95rem;
+}
