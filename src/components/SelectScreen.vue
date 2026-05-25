@@ -274,8 +274,9 @@ export default {
 .mk-select-screen {
   position: relative;
   min-height: 100vh;
-  overflow: hidden;
-  padding: 1.4rem 1.8rem 7rem;
+  overflow-x: hidden;
+  overflow-y: auto;
+  padding: 1rem 1.8rem 8rem;
   background: #030307;
   color: var(--text-primary);
   z-index: 1;
@@ -375,7 +376,8 @@ export default {
   position: relative;
   z-index: 5;
   text-align: center;
-  margin-top: -1.9rem;
+  margin-top: -1.5rem;
+  margin-bottom: 0;
   opacity: 0;
   transform: translateY(-18px);
   transition: opacity 0.5s ease, transform 0.5s ease;
@@ -418,8 +420,8 @@ export default {
   grid-template-columns: 1fr auto 1fr;
   align-items: end;
   gap: 1.5rem;
-  min-height: 49vh;
-  margin-top: 0.8rem;
+  min-height: 54vh;
+  margin-top: -0.4rem;
   opacity: 0;
   transform: translateY(24px);
   transition: opacity 0.65s ease 0.15s, transform 0.65s ease 0.15s;
@@ -432,8 +434,8 @@ export default {
 
 .fighter-preview {
   position: relative;
-  height: 48vh;
-  min-height: 320px;
+  height: clamp(430px, 58vh, 680px);
+  min-height: 430px;
   display: flex;
   align-items: flex-end;
   justify-content: center;
@@ -443,11 +445,11 @@ export default {
 .fighter-glow {
   position: absolute;
   bottom: 5%;
-  width: 65%;
-  height: 70%;
+  width: 70%;
+  height: 75%;
   border-radius: 50%;
   filter: blur(45px);
-  opacity: 0.5;
+  opacity: 0.55;
 }
 
 .fighter-preview.segua .fighter-glow {
@@ -465,8 +467,8 @@ export default {
 .fighter-big-img {
   position: relative;
   z-index: 2;
-  max-height: 100%;
-  max-width: 92%;
+  max-height: 123%;
+  max-width: 118%;
   object-fit: contain;
   object-position: bottom center;
   filter:
@@ -495,9 +497,9 @@ export default {
 .fighter-shadow {
   position: absolute;
   bottom: -6px;
-  width: 55%;
-  height: 22px;
-  background: radial-gradient(ellipse, rgba(0,0,0,0.9), transparent 70%);
+  width: 60%;
+  height: 24px;
+  background: radial-gradient(ellipse, rgba(0,0,0,0.95), transparent 70%);
   filter: blur(5px);
   z-index: 1;
 }
@@ -595,8 +597,8 @@ export default {
 .roster-panel {
   position: relative;
   z-index: 25;
-  width: min(980px, 100%);
-  margin: -0.2rem auto 0;
+  width: min(1080px, 100%);
+  margin: -1.4rem auto 0;
   background: linear-gradient(180deg, rgba(10,10,16,0.88), rgba(3,3,7,0.96));
   border: 1px solid rgba(200,168,75,0.26);
   box-shadow:
@@ -756,7 +758,9 @@ export default {
   gap: 0.8rem;
   align-items: center;
   border-top: 1px solid rgba(200,168,75,0.12);
-  padding-top: 0.75rem;
+  padding-top: 0.65rem;
+  max-height: 110px;
+  overflow: hidden;
 }
 
 .active-name {
@@ -884,8 +888,8 @@ export default {
   }
 
   .fighter-preview {
-    height: 32vh;
-    min-height: 240px;
+    height: 40vh;
+    min-height: 300px;
   }
 
   .vs-center {
@@ -905,6 +909,10 @@ export default {
     text-align: center;
   }
 
+  .roster-panel {
+    margin-top: 0.5rem;
+  }
+
   .roster-grid {
     grid-template-columns: repeat(3, 78px);
   }
@@ -916,6 +924,7 @@ export default {
   .active-details {
     grid-template-columns: 1fr;
     text-align: center;
+    max-height: none;
   }
 
   .confirm-bar {
