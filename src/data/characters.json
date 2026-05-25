@@ -1,0 +1,179 @@
+[
+  {
+    "id": 1,
+    "name": "La Segua",
+    "skill": "Grito Espectral",
+    "type": "segua",
+    "power": 3,
+    "speed": 5,
+    "mysticism": 5,
+    "image": "/src/assets/images/characters/segua.png",
+    "sprites": {
+      "idle": [
+        "/src/assets/images/characters/segua-idle-01.webp",
+        "/src/assets/images/characters/segua-idle-02.webp",
+        "/src/assets/images/characters/segua-idle-03.webp",
+        "/src/assets/images/characters/segua-idle-04.webp"
+      ],
+      "walk": [
+        "/src/assets/images/characters/segua-walk-01.webp",
+        "/src/assets/images/characters/segua-walk-02.webp",
+        "/src/assets/images/characters/segua-walk-03.webp",
+        "/src/assets/images/characters/segua-walk-04.webp",
+        "/src/assets/images/characters/segua-walk-05.webp",
+        "/src/assets/images/characters/segua-walk-06.webp"
+      ],
+      "jump": [
+        "/src/assets/images/characters/segua-jump-01.webp",
+        "/src/assets/images/characters/segua-jump-02.webp",
+        "/src/assets/images/characters/segua-jump-03.webp",
+        "/src/assets/images/characters/segua-jump-04.webp"
+      ],
+      "attack": [
+        "/src/assets/images/characters/segua-attack-01.webp",
+        "/src/assets/images/characters/segua-attack-02.webp",
+        "/src/assets/images/characters/segua-attack-03.webp",
+        "/src/assets/images/characters/segua-attack-04.webp",
+        "/src/assets/images/characters/segua-attack-05.webp"
+      ],
+      "special": [
+        "/src/assets/images/characters/segua-special-01.webp",
+        "/src/assets/images/characters/segua-special-02.webp",
+        "/src/assets/images/characters/segua-special-03.webp",
+        "/src/assets/images/characters/segua-special-04.webp",
+        "/src/assets/images/characters/segua-special-05.webp",
+        "/src/assets/images/characters/segua-special-06.webp"
+      ],
+      "hit": [
+        "/src/assets/images/characters/segua-hit-01.webp",
+        "/src/assets/images/characters/segua-hit-02.webp",
+        "/src/assets/images/characters/segua-hit-03.webp"
+      ],
+      "ko": [
+        "/src/assets/images/characters/segua-ko-01.webp",
+        "/src/assets/images/characters/segua-ko-02.webp",
+        "/src/assets/images/characters/segua-ko-03.webp",
+        "/src/assets/images/characters/segua-ko-04.webp"
+      ]
+    },
+    "description": "Espiritu vengativo que atrae a los hombres con su belleza para luego revelar su verdadera forma aterradora. Su grito paraliza a los mas valientes."
+  },
+  {
+    "id": 2,
+    "name": "El Cadejos",
+    "skill": "Mordida Sombria",
+    "type": "cadejos",
+    "power": 5,
+    "speed": 4,
+    "defense": 3,
+    "image": "/src/assets/images/characters/cadejos.png",
+    "sprites": {
+      "idle": [
+        "/src/assets/images/characters/cadejos-idle-01.webp",
+        "/src/assets/images/characters/cadejos-idle-02.webp",
+        "/src/assets/images/characters/cadejos-idle-03.webp",
+        "/src/assets/images/characters/cadejos-idle-04.webp"
+      ],
+      "walk": [
+        "/src/assets/images/characters/cadejos-walk-01.webp",
+        "/src/assets/images/characters/cadejos-walk-02.webp",
+        "/src/assets/images/characters/cadejos-walk-03.webp",
+        "/src/assets/images/characters/cadejos-walk-04.webp",
+        "/src/assets/images/characters/cadejos-walk-05.webp",
+        "/src/assets/images/characters/cadejos-walk-06.webp"
+      ],
+      "jump": [
+        "/src/assets/images/characters/cadejos-jump-01.webp",
+        "/src/assets/images/characters/cadejos-jump-02.webp",
+        "/src/assets/images/characters/cadejos-jump-03.webp",
+        "/src/assets/images/characters/cadejos-jump-04.webp"
+      ],
+      "attack": [
+        "/src/assets/images/characters/cadejos-attack-01.webp",
+        "/src/assets/images/characters/cadejos-attack-02.webp",
+        "/src/assets/images/characters/cadejos-attack-03.webp",
+        "/src/assets/images/characters/cadejos-attack-04.webp",
+        "/src/assets/images/characters/cadejos-attack-05.webp"
+      ],
+      "special": [
+        "/src/assets/images/characters/cadejos-special-01.webp",
+        "/src/assets/images/characters/cadejos-special-02.webp",
+        "/src/assets/images/characters/cadejos-special-03.webp",
+        "/src/assets/images/characters/cadejos-special-04.webp",
+        "/src/assets/images/characters/cadejos-special-05.webp",
+        "/src/assets/images/characters/cadejos-special-06.webp"
+      ],
+      "hit": [
+        "/src/assets/images/characters/cadejos-hit-01.webp",
+        "/src/assets/images/characters/cadejos-hit-02.webp",
+        "/src/assets/images/characters/cadejos-hit-03.webp"
+      ],
+      "ko": [
+        "/src/assets/images/characters/cadejos-ko-01.webp",
+        "/src/assets/images/characters/cadejos-ko-02.webp",
+        "/src/assets/images/characters/cadejos-ko-03.webp",
+        "/src/assets/images/characters/cadejos-ko-04.webp"
+      ]
+    },
+    "description": "Perro demoniaco de ojos rojos que vaga en la noche. Mensajero de la muerte, sus cadenas resuenan en las calles oscuras de los pueblos."
+  },
+  {
+    "id": 3,
+    "name": "El Padre sin Cabeza",
+    "skill": "Condena Espectral",
+    "type": "padre",
+    "power": 3,
+    "speed": 2,
+    "range": 5,
+    "image": "/src/assets/images/characters/padre-sin-cabeza.png",
+    "sprites": {
+      "idle": [
+        "/src/assets/images/characters/padre-sin-cabeza-idle-01.webp",
+        "/src/assets/images/characters/padre-sin-cabeza-idle-02.webp",
+        "/src/assets/images/characters/padre-sin-cabeza-idle-03.webp",
+        "/src/assets/images/characters/padre-sin-cabeza-idle-04.webp"
+      ],
+      "walk": [
+        "/src/assets/images/characters/padre-sin-cabeza-walk-01.webp",
+        "/src/assets/images/characters/padre-sin-cabeza-walk-02.webp",
+        "/src/assets/images/characters/padre-sin-cabeza-walk-03.webp",
+        "/src/assets/images/characters/padre-sin-cabeza-walk-04.webp",
+        "/src/assets/images/characters/padre-sin-cabeza-walk-05.webp",
+        "/src/assets/images/characters/padre-sin-cabeza-walk-06.webp"
+      ],
+      "jump": [
+        "/src/assets/images/characters/padre-sin-cabeza-jump-01.webp",
+        "/src/assets/images/characters/padre-sin-cabeza-jump-02.webp",
+        "/src/assets/images/characters/padre-sin-cabeza-jump-03.webp",
+        "/src/assets/images/characters/padre-sin-cabeza-jump-04.webp"
+      ],
+      "attack": [
+        "/src/assets/images/characters/padre-sin-cabeza-attack-01.webp",
+        "/src/assets/images/characters/padre-sin-cabeza-attack-02.webp",
+        "/src/assets/images/characters/padre-sin-cabeza-attack-03.webp",
+        "/src/assets/images/characters/padre-sin-cabeza-attack-04.webp",
+        "/src/assets/images/characters/padre-sin-cabeza-attack-05.webp"
+      ],
+      "special": [
+        "/src/assets/images/characters/padre-sin-cabeza-special-01.webp",
+        "/src/assets/images/characters/padre-sin-cabeza-special-02.webp",
+        "/src/assets/images/characters/padre-sin-cabeza-special-03.webp",
+        "/src/assets/images/characters/padre-sin-cabeza-special-04.webp",
+        "/src/assets/images/characters/padre-sin-cabeza-special-05.webp",
+        "/src/assets/images/characters/padre-sin-cabeza-special-06.webp"
+      ],
+      "hit": [
+        "/src/assets/images/characters/padre-sin-cabeza-hit-01.webp",
+        "/src/assets/images/characters/padre-sin-cabeza-hit-02.webp",
+        "/src/assets/images/characters/padre-sin-cabeza-hit-03.webp"
+      ],
+      "ko": [
+        "/src/assets/images/characters/padre-sin-cabeza-ko-01.webp",
+        "/src/assets/images/characters/padre-sin-cabeza-ko-02.webp",
+        "/src/assets/images/characters/padre-sin-cabeza-ko-03.webp",
+        "/src/assets/images/characters/padre-sin-cabeza-ko-04.webp"
+      ]
+    },
+    "description": "Sacerdote condenado que arrastra cadenas pesadas y lleva su calavera envuelta en llamas azules. Su maldicion alcanza desde las sombras."
+  }
+]

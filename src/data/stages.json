@@ -1,0 +1,23 @@
+[
+  {
+    "id": 1,
+    "name": "Casona de Santa Rosa",
+    "location": "Guanacaste, Costa Rica",
+    "description": "Escenario inspirado en la histórica Casona de Santa Rosa, con una atmósfera oscura, dramática y cargada de identidad costarricense.",
+    "image": "/src/assets/images/backgrounds/casona-santa-rosa.png"
+  },
+  {
+    "id": 2,
+    "name": "Mercado Central de San José",
+    "location": "San José, Costa Rica",
+    "description": "Escenario inspirado en el ambiente tradicional del Mercado Central, con luces cálidas, pasillos estrechos y elementos culturales urbanos.",
+    "image": "/src/assets/images/backgrounds/mercado-central.png"
+  },
+  {
+    "id": 3,
+    "name": "Cafetal Nocturno",
+    "location": "Zona cafetalera de Costa Rica",
+    "description": "Escenario inspirado en los cafetales costarricenses, con neblina, vegetación y un ambiente misterioso ideal para una batalla de leyendas.",
+    "image": "/src/assets/images/backgrounds/cafetal.png"
+  }
+]

@@ -1,0 +1,10 @@
+[
+  {
+    "id": 1,
+    "name": "Vino de coyol",
+    "type": "healing",
+    "description": "Bebida tradicional guanacasteca utilizada en el juego como objeto especial para recuperar energía durante el combate.",
+    "healPercent": 15,
+    "image": "/src/assets/images/items/vino-coyol.png"
+  }
+]
