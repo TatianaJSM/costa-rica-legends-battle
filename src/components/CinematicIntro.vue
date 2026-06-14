@@ -171,17 +171,16 @@ export default {
       }
     }
 
-    onMounted(() => {
-      if (props.phase === 0) {
-        startVideoSequence()
-        // Dar un pequeño delay para asegurar que el DOM del video cargó
-        setTimeout(attemptPlay, 150)
-      }
-    })
-
     onUnmounted(() => {
       clearWatchdog()
     })
+
+    watch(() => props.phase, (newPhase) => {
+      if (newPhase === 0) {
+        startVideoSequence()
+        setTimeout(attemptPlay, 150)
+      }
+    }, { immediate: true })
 
     watch(currentVideoSrc, () => {
       nextTick(() => {

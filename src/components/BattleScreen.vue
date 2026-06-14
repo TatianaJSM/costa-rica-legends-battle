@@ -320,7 +320,7 @@ export default {
     const coyolUsed = ref(false)
     const showMoveMenu = ref(false)
     const introActive = ref(true)
-    const introPhase = ref(1)
+    const introPhase = ref(0)
     const playerVulnerable = ref(false)
     const enemyVulnerable = ref(false)
 
