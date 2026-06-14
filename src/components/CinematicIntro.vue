@@ -71,16 +71,7 @@
 
 <script>
 import { ref, computed, onUnmounted, watch, nextTick } from 'vue'
-
-const seguaIntro = new URL('../assets/videos/segua_intro.mp4', import.meta.url).href
-const cadejosIntro = new URL('../assets/videos/cadejos_intro.mp4', import.meta.url).href
-const padreIntro = new URL('../assets/videos/padre_intro.mp4', import.meta.url).href
-
-const videoMap = {
-  segua: seguaIntro,
-  cadejos: cadejosIntro,
-  padre: padreIntro
-}
+import { preloadedVideos, videoMap } from '../data/videoCache'
 
 export default {
   name: 'CinematicIntro',
@@ -97,8 +88,8 @@ export default {
     const currentStep = ref('player-video')
     const currentVideoTitle = ref('')
 
-    const playerVideo = computed(() => videoMap[props.player?.type])
-    const enemyVideo = computed(() => videoMap[props.enemy?.type])
+    const playerVideo = computed(() => preloadedVideos.value[props.player?.type] || videoMap[props.player?.type])
+    const enemyVideo = computed(() => preloadedVideos.value[props.enemy?.type] || videoMap[props.enemy?.type])
 
     let watchdogTimer = null
     let transitioning = false
