@@ -27,6 +27,8 @@
       :enemy="enemyChar"
       :selected-stage="selectedStage"
       :phase="introPhase"
+      @videos-done="handleVideosDone"
+      @skip="skipIntro"
     />
 
     <!-- ── HUD ───────────────────────────────────────────── -->
@@ -796,10 +798,9 @@ export default {
       scheduleAiAttack()
     }
 
-    function runIntro() {
-      introActive.value = true
+    function handleVideosDone() {
+      // Comenzar la animación de cartas VS
       introPhase.value = 1
-      canAttack.value = false
 
       setTimeout(() => {
         introPhase.value = 2
@@ -810,6 +811,16 @@ export default {
       }, 2500)
 
       setTimeout(startFight, 3900)
+    }
+
+    function skipIntro() {
+      startFight()
+    }
+
+    function runIntro() {
+      introActive.value = true
+      introPhase.value = 0 // Fase 0: reproduce videos secuenciales
+      canAttack.value = false
     }
 
     function endBattle(win) {
@@ -936,6 +947,8 @@ export default {
       jump,
       useCoyol,
       getJumpDuration,
+      handleVideosDone,
+      skipIntro,
       hpClass,
     }
   },
