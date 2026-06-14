@@ -19,7 +19,7 @@
     <div class="stage-layer stage-grain"></div>
     <div class="stage-layer stage-vignette"></div>
 
-    <div class="screen-flash" :class="{ active: flashActive }"></div>
+    <div class="screen-flash" :class="{ active: flashActive, strong: zoomHit }"></div>
 
     <CinematicIntro
       v-if="introActive"
@@ -848,8 +848,12 @@ export default {
       scheduleAiAttack()
     }
 
+    const keysPressed = {}
+
     function handleKeydown(event) {
       if (battleOver.value || introActive.value) return
+
+      keysPressed[event.code] = true
 
       if (event.code === 'Space' || event.code === 'KeyW') {
         event.preventDefault()
@@ -862,10 +866,67 @@ export default {
       if (event.code === 'KeyC') useCoyol()
     }
 
+    function handleKeyup(event) {
+      keysPressed[event.code] = false
+    }
+
+    const speed = 0.5
+    const aiSpeed = 0.35
+
+    function updateMovement() {
+      if (battleOver.value || introActive.value) return
+
+      const rigidStates = ['jump', 'attack', 'special', 'hit', 'ko']
+      if (rigidStates.includes(playerState.value)) return
+
+      let isMoving = false
+
+      if (keysPressed['KeyA'] || keysPressed['ArrowLeft']) {
+        playerX.value = clamp(playerX.value - speed, 8, enemyX.value - 12)
+        isMoving = true
+      }
+      if (keysPressed['KeyD'] || keysPressed['ArrowRight']) {
+        playerX.value = clamp(playerX.value + speed, 8, enemyX.value - 12)
+        isMoving = true
+      }
+
+      if (isMoving) {
+        if (playerState.value !== 'walk') playerState.value = 'walk'
+      } else {
+        if (playerState.value === 'walk') playerState.value = 'idle'
+      }
+    }
+
+    function updateAiMovement() {
+      if (battleOver.value || introActive.value) return
+
+      const rigidStates = ['jump', 'attack', 'special', 'hit', 'ko']
+      if (rigidStates.includes(enemyState.value)) return
+
+      const distance = enemyX.value - playerX.value
+      let isMoving = false
+
+      if (distance > 26) {
+        enemyX.value = clamp(enemyX.value - aiSpeed, playerX.value + 12, 92)
+        isMoving = true
+      } else if (distance < 15) {
+        enemyX.value = clamp(enemyX.value + aiSpeed, playerX.value + 12, 92)
+        isMoving = true
+      }
+
+      if (isMoving) {
+        if (enemyState.value !== 'walk') enemyState.value = 'walk'
+      } else {
+        if (enemyState.value === 'walk') enemyState.value = 'idle'
+      }
+    }
+
     // Loop principal del juego.
     let rafId = null
 
     function gameLoop() {
+      updateMovement()
+      updateAiMovement()
       tickStates()
       rafId = requestAnimationFrame(gameLoop)
     }
@@ -877,6 +938,7 @@ export default {
       gameLoop()
       runIntro()
       window.addEventListener('keydown', handleKeydown)
+      window.addEventListener('keyup', handleKeyup)
     })
 
     onUnmounted(() => {
@@ -888,6 +950,7 @@ export default {
       clearTimeout(enemyVulnerableTimer)
       cancelAnimationFrame(rafId)
       window.removeEventListener('keydown', handleKeydown)
+      window.removeEventListener('keyup', handleKeyup)
     })
 
     return {
@@ -981,9 +1044,15 @@ export default {
 /* ── PARALLAX ─────────────────────────────────────────────── */
 .parallax-root {
   position: absolute;
-  inset: 0;
+  inset: -2%;
   z-index: 0;
   overflow: hidden;
+  animation: cameraSway 10s ease-in-out infinite alternate;
+}
+
+@keyframes cameraSway {
+  0%, 100% { transform: scale(1.03) translate(0, 0); }
+  50% { transform: scale(1.03) translate(-8px, 4px); }
 }
 
 .stage-bg,
@@ -1092,7 +1161,8 @@ export default {
   transition: background 0.05s;
 }
 
-.screen-flash.active { background: rgba(255,255,255,0.15); }
+.screen-flash.active { background: rgba(255,255,255,0.18); }
+.screen-flash.active.strong { background: rgba(180, 0, 0, 0.24); }
 
 /* ── HUD ──────────────────────────────────────────────────── */
 .battle-header {
@@ -1281,7 +1351,7 @@ export default {
   flex-direction: column;
   align-items: center;
   z-index: 16;
-  transition: left 0.28s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  transition: left 0.08s linear;
   will-change: left;
 }
 
