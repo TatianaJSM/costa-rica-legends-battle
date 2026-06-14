@@ -3,7 +3,7 @@
    Estilo: Dark Fantasy / Mortal Kombat
    ═══════════════════════════════════════════════════════ */
 
-@import url('https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700;900&family=Cinzel:wght@400;600;700&family=MedievalSharp&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
 
 /* ── Variables ──────────────────────────────────────── */
 :root {
@@ -24,9 +24,9 @@
   --text-muted:   #7a7060;
   --text-soul:    #00d4ff;
 
-  --font-title: 'Cinzel Decorative', 'Trajan Pro', serif;
-  --font-display: 'Cinzel', serif;
-  --font-body: 'Cinzel', Georgia, serif;
+  --font-title: 'Press Start 2P', monospace;
+  --font-display: 'Press Start 2P', monospace;
+  --font-body: 'Press Start 2P', monospace;
 }
 
 /* ── Reset & Base ───────────────────────────────────── */
@@ -48,8 +48,8 @@ body {
     url("data:image/svg+xml,%3Csvg width='60' height='60' xmlns='http://www.w3.org/2000/svg'%3E%3Crect width='60' height='60' fill='none'/%3E%3Cpath d='M30 0 L60 30 L30 60 L0 30 Z' fill='none' stroke='rgba(200,168,75,0.03)' stroke-width='0.5'/%3E%3C/svg%3E");
   color: var(--text-primary);
   font-family: var(--font-body);
-  font-size: 16px;
-  line-height: 1.6;
+  font-size: 10px;
+  line-height: 1.8;
   min-height: 100vh;
   overflow-x: hidden;
 }
@@ -66,41 +66,37 @@ body {
 /* ── Tipografía ─────────────────────────────────────── */
 h1, h2, h3, h4, h5, h6 {
   font-family: var(--font-title);
-  letter-spacing: 0.06em;
-  line-height: 1.2;
+  letter-spacing: 0.04em;
+  line-height: 1.3;
   color: var(--gold);
-  text-shadow:
-    0 0 20px rgba(200, 168, 75, 0.5),
-    0 0 60px rgba(200, 168, 75, 0.2);
+  text-shadow: 2px 2px 0px #000;
 }
 
 h1 {
-  font-size: clamp(2.5rem, 8vw, 5.5rem);
+  font-size: clamp(1.4rem, 4.5vw, 2.8rem);
   font-weight: 900;
   color: #fff;
   text-shadow:
-    0 0 10px rgba(255,255,255,0.8),
-    0 0 30px rgba(200, 168, 75, 0.6),
-    0 0 80px rgba(200, 168, 75, 0.3),
-    3px 3px 0px rgba(139,0,0,0.8);
+    3px 3px 0px rgba(0,0,0,0.92),
+    0 0 12px rgba(240, 208, 96, 0.45);
   animation: titlePulse 4s ease-in-out infinite;
 }
 
 h2 {
-  font-size: clamp(1.4rem, 4vw, 2.5rem);
+  font-size: clamp(0.9rem, 3vw, 1.4rem);
   font-weight: 700;
 }
 
 h3 {
-  font-size: clamp(1rem, 2.5vw, 1.6rem);
+  font-size: clamp(0.75rem, 2vw, 1.05rem);
   font-weight: 600;
 }
 
 p {
   font-family: var(--font-display);
   color: var(--text-primary);
-  font-size: 1rem;
-  letter-spacing: 0.03em;
+  font-size: 8px;
+  letter-spacing: 0.02em;
 }
 
 a {
@@ -451,9 +447,10 @@ nav ul li a.active {
 }
 
 .stat-bar {
-  height: 6px;
-  background: rgba(255,255,255,0.07);
-  border: 1px solid rgba(200,168,75,0.15);
+  height: 8px;
+  background: #111118;
+  border: 2px solid #000;
+  box-shadow: 0 0 0 1px rgba(200,168,75,0.2);
   overflow: hidden;
   position: relative;
 }
@@ -472,7 +469,6 @@ nav ul li a.active {
   width: 3px;
   height: 100%;
   background: rgba(255,255,255,0.8);
-  filter: blur(1px);
 }
 
 /* ── Barra de Vida (HP Bar) ─────────────────────────── */
@@ -482,17 +478,18 @@ nav ul li a.active {
 
 .health-bar-label {
   font-family: var(--font-display);
-  font-size: 0.7rem;
-  letter-spacing: 0.2em;
+  font-size: 7px;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--text-muted);
   margin-bottom: 6px;
 }
 
 .health-bar {
-  height: 18px;
+  height: 20px;
   background: #0a0a0f;
-  border: 1px solid rgba(200,168,75,0.3);
+  border: 3px solid #000;
+  box-shadow: 0 0 0 1.5px rgba(200,168,75,0.45);
   position: relative;
   overflow: hidden;
 }
@@ -506,6 +503,15 @@ nav ul li a.active {
   transition: transform 0.5s ease;
 }
 
+.health-bar::after {
+  content: '';
+  position: absolute;
+  inset: 2px;
+  background: repeating-linear-gradient(90deg, transparent, transparent 7px, #000 7px, #000 9px);
+  pointer-events: none;
+  z-index: 5;
+}
+
 .health-bar.hp-100::before { transform: scaleX(1); }
 .health-bar.hp-75::before  { transform: scaleX(0.75); }
 .health-bar.hp-50::before  { transform: scaleX(0.5); background: linear-gradient(90deg, #7a4800, #c07800, #e09000); }
@@ -514,76 +520,67 @@ nav ul li a.active {
 /* ── Botones ─────────────────────────────────────────── */
 .btn {
   font-family: var(--font-display);
-  font-size: 0.85rem;
-  letter-spacing: 0.2em;
+  font-size: 8px;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
-  padding: 0.8rem 2rem;
-  border: none;
+  padding: 0.8rem 1.8rem;
+  border-radius: 0px;
   cursor: pointer;
   position: relative;
   overflow: hidden;
-  transition: all 0.25s;
+  transition: all 0.12s;
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
   text-decoration: none;
+  box-shadow: 3px 3px 0px #000;
 }
 
 .btn-primary {
-  background: linear-gradient(135deg, #6a0000 0%, #8b0000 50%, #6a0000 100%);
+  background: #8b0000;
   color: var(--gold-bright);
-  border: 1px solid var(--gold-dim);
-  clip-path: polygon(10px 0%, 100% 0%, calc(100% - 10px) 100%, 0% 100%);
-}
-
-.btn-primary::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(135deg, transparent 0%, rgba(200,168,75,0.15) 50%, transparent 100%);
-  transform: translateX(-100%);
-  transition: transform 0.4s;
+  border: 3px solid #c8a84b;
 }
 
 .btn-primary:hover {
-  background: linear-gradient(135deg, #8b0000 0%, #b00000 50%, #8b0000 100%);
-  border-color: var(--gold);
-  box-shadow: 0 0 20px rgba(139,0,0,0.5), 0 0 40px rgba(139,0,0,0.2);
-  transform: translateY(-2px);
+  background: #b20000;
+  border-color: #f0d060;
+  transform: translate(-1px, -1px);
+  box-shadow: 4px 4px 0px #000;
 }
 
-.btn-primary:hover::before { transform: translateX(100%); }
-
 .btn-secondary {
-  background: transparent;
+  background: #11111c;
   color: var(--gold);
-  border: 1px solid var(--gold-dim);
-  clip-path: polygon(10px 0%, 100% 0%, calc(100% - 10px) 100%, 0% 100%);
+  border: 3px solid var(--gold-dim);
 }
 
 .btn-secondary:hover {
-  background: rgba(200,168,75,0.08);
+  background: #202030;
   border-color: var(--gold);
   color: var(--gold-bright);
-  box-shadow: 0 0 15px rgba(200,168,75,0.2);
+  transform: translate(-1px, -1px);
+  box-shadow: 4px 4px 0px #000;
 }
 
 .btn-soul {
-  background: linear-gradient(135deg, #003040 0%, #005070 50%, #003040 100%);
+  background: #004060;
   color: var(--cyan-soul);
-  border: 1px solid var(--cyan-dim);
-  clip-path: polygon(10px 0%, 100% 0%, calc(100% - 10px) 100%, 0% 100%);
-  animation: cyanPulse 3s ease-in-out infinite;
+  border: 3px solid var(--cyan-dim);
 }
 
 .btn-soul:hover {
-  background: linear-gradient(135deg, #004060 0%, #006090 50%, #004060 100%);
-  color: #80e8ff;
+  background: #005f8f;
   border-color: var(--cyan-soul);
-  transform: translateY(-2px);
+  color: #80e8ff;
+  transform: translate(-1px, -1px);
+  box-shadow: 4px 4px 0px #000;
 }
 
-.btn:active { transform: scale(0.97) translateY(0); }
+.btn:active {
+  transform: translate(2px, 2px);
+  box-shadow: 1px 1px 0px #000;
+}
 
 /* ── Pantalla de Batalla ─────────────────────────────── */
 .battle-screen {

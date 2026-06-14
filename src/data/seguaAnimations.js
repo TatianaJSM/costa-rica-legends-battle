@@ -6,9 +6,9 @@ export const seguaAnimations = {
     seguaBase
   ],
 
-  // Mientras no tengas frames walk, usamos la imagen normal
   walk: [
-    seguaBase
+    new URL('../assets/images/characters/segua/walk/walk_01.png', import.meta.url).href,
+    new URL('../assets/images/characters/segua/walk/walk_02.png', import.meta.url).href
   ],
 
   // Estos sí son tus frames de salto (5 frames)

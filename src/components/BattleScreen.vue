@@ -4,20 +4,8 @@
     class="battle-screen"
     :class="[cameraClass, { 'zoom-hit': zoomHit }]"
   >
-    <!-- ── PARALLAX LAYERS ───────────────────────────────── -->
-    <div class="parallax-root" :style="parallaxStyle">
-      <div class="stage-layer stage-bg" :style="layerStyle(0.08)"></div>
-      <div class="stage-layer stage-mid" :style="layerStyle(0.22)"></div>
-      <div class="stage-layer stage-fg" :style="layerStyle(0.45)"></div>
-    </div>
-
-    <!-- efectos atmosféricos fijos -->
-    <div class="stage-layer stage-mist mist-back"></div>
-    <div class="stage-layer stage-mist mist-front"></div>
-    <div class="stage-layer stage-lights" :style="lightsStyle"></div>
-    <div class="stage-layer stage-floor-glow"></div>
-    <div class="stage-layer stage-grain"></div>
-    <div class="stage-layer stage-vignette"></div>
+    <!-- ── FIXED BACKGROUND LAYER ─────────────────────────── -->
+    <div class="stage-background" :style="stageBackgroundStyle"></div>
 
     <div class="screen-flash" :class="{ active: flashActive, strong: zoomHit }"></div>
 
@@ -65,7 +53,6 @@
 
     <!-- ── ARENA ─────────────────────────────────────────── -->
     <div class="arena" :class="{ visible: ready && !introActive }">
-      <div class="arena-floor"></div>
 
       <!-- JUGADOR -->
       <div
@@ -228,6 +215,8 @@
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import CinematicIntro from './CinematicIntro.vue'
 import { seguaAnimations } from '../data/seguaAnimations'
+import { cadejosAnimations } from '../data/cadejosAnimations'
+import { padreAnimations } from '../data/padreAnimations'
 
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms))
 const clamp = (v, min, max) => Math.min(max, Math.max(min, v))
@@ -280,25 +269,9 @@ export default {
     const playerX = ref(22)
     const enemyX = ref(76)
 
-    // ── PARALLAX ───────────────────────────────────────────────
-    const parallaxOffset = computed(() => {
-      const center = (playerX.value + enemyX.value) / 2
-      return (center - 50) * -1.4
-    })
-
-    const parallaxStyle = computed(() => ({
-      '--stage-image': `url(${props.selectedStage?.image || '/src/assets/images/backgrounds/cafetal.png'})`,
-    }))
-
-    function layerStyle(factor) {
-      return {
-        transform: `translateX(${parallaxOffset.value * factor}px) scale(1.08)`,
-      }
-    }
-
-    const lightsStyle = computed(() => ({
-      '--player-x': `${playerX.value}%`,
-      '--enemy-x': `${enemyX.value}%`,
+    // ── STAGE BACKGROUND ───────────────────────────────────────
+    const stageBackgroundStyle = computed(() => ({
+      backgroundImage: `url(${props.selectedStage?.image || '/src/assets/images/backgrounds/cafetal.png'})`
     }))
 
     // ── HP / Combate ───────────────────────────────────────────
@@ -361,7 +334,17 @@ export default {
         if (Array.isArray(seguaFrames) && seguaFrames.length > 0) return seguaFrames
       }
 
-      // El Padre y Cadejos siguen usando sprites del JSON si existen.
+      if (character?.type === 'cadejos') {
+        const cadejosFrames = cadejosAnimations[animationState]
+        if (Array.isArray(cadejosFrames) && cadejosFrames.length > 0) return cadejosFrames
+      }
+
+      if (character?.type === 'padre') {
+        const padreFrames = padreAnimations[animationState]
+        if (Array.isArray(padreFrames) && padreFrames.length > 0) return padreFrames
+      }
+
+      // El Padre y Cadejos siguen usando sprites del JSON si existen (fallback).
       const sprites = character?.sprites?.[state]
       if (Array.isArray(sprites) && sprites.length > 0) return sprites
 
@@ -558,7 +541,7 @@ export default {
     async function performAttack(attacker, attack) {
       if (!attack) return
       if (battleOver.value || introActive.value) return
-      if (attacker === 'player' && !canAttack.value) return
+      if (attacker === 'player' && (playerState.value === 'block' || !canAttack.value)) return
 
       const isPlayer = attacker === 'player'
       const attackerChar = isPlayer ? playerChar.value : enemyChar.value
@@ -624,55 +607,66 @@ export default {
     function doHit(attacker, damage, strong = false, shake = 'light') {
       if (battleOver.value) return
 
-      triggerFeedback(shake, strong)
+      const isPlayer = attacker === 'player'
+      const targetState = isPlayer ? enemyState : playerState
+      const isBlocking = targetState.value === 'block'
+      const finalDamage = isBlocking ? Math.ceil(damage * 0.5) : damage
 
-      if (attacker === 'player') {
-        enemyState.value = 'hit'
+      triggerFeedback(isBlocking ? 'light' : shake, isBlocking ? false : strong)
+
+      if (isPlayer) {
         enemyFlash.value = true
 
         setTimeout(() => {
           enemyFlash.value = false
-        }, 200)
+        }, 150)
 
-        enemyHp.value = Math.max(0, enemyHp.value - damage)
-        spawnDamageNumber(damage, enemyX.value, 32, 'enemy-dmg')
-        applyKnockback('enemy', strong ? 6 : 3)
+        enemyHp.value = Math.max(0, enemyHp.value - finalDamage)
+        spawnDamageNumber(finalDamage, enemyX.value, 32, isBlocking ? 'block-dmg' : 'enemy-dmg')
+        applyKnockback('enemy', isBlocking ? 1 : (strong ? 6 : 3))
 
         setTimeout(() => {
           enemyDmgBar.value = enemyHp.value
         }, 400)
 
-        setTimeout(() => {
-          if (!battleOver.value) enemyState.value = 'idle'
-        }, 320)
-
-        showMessage(`-${damage}% HP`, 'hit')
+        if (isBlocking) {
+          showMessage('¡BLOQUEADO!', 'heal')
+        } else {
+          enemyState.value = 'hit'
+          setTimeout(() => {
+            if (!battleOver.value && enemyState.value === 'hit') enemyState.value = 'idle'
+          }, 320)
+          showMessage(`-${finalDamage}% HP`, 'hit')
+        }
 
         if (enemyHp.value <= 0) {
           enemyState.value = 'ko'
           endBattle('player')
         }
       } else {
-        playerState.value = 'hit'
         playerFlash.value = true
 
         setTimeout(() => {
           playerFlash.value = false
-        }, 200)
+        }, 150)
 
-        playerHp.value = Math.max(0, playerHp.value - damage)
-        spawnDamageNumber(damage, playerX.value, 32, 'player-dmg')
-        applyKnockback('player', strong ? 6 : 3)
+        playerHp.value = Math.max(0, playerHp.value - finalDamage)
+        spawnDamageNumber(finalDamage, playerX.value, 32, isBlocking ? 'block-dmg' : 'player-dmg')
+        applyKnockback('player', isBlocking ? 1 : (strong ? 6 : 3))
 
         setTimeout(() => {
           playerDmgBar.value = playerHp.value
         }, 400)
 
-        setTimeout(() => {
-          if (!battleOver.value) playerState.value = 'idle'
-        }, 320)
-
-        showMessage(`-${damage}% HP`, 'hit')
+        if (isBlocking) {
+          showMessage('¡BLOQUEADO!', 'heal')
+        } else {
+          playerState.value = 'hit'
+          setTimeout(() => {
+            if (!battleOver.value && playerState.value === 'hit') playerState.value = 'idle'
+          }, 320)
+          showMessage(`-${finalDamage}% HP`, 'hit')
+        }
 
         if (playerHp.value <= 0) {
           playerState.value = 'ko'
@@ -894,6 +888,13 @@ export default {
         jump('player')
       }
 
+      if (event.code === 'KeyS') {
+        const rigidStates = ['jump', 'attack', 'special', 'hit', 'ko']
+        if (!rigidStates.includes(playerState.value)) {
+          playerState.value = 'block'
+        }
+      }
+
       if (playerChar.value?.type === 'segua') {
         // Para La Segua, solo la tecla J realiza ataque
         if (event.code === 'KeyJ') playerAttack(attacks.value[0])
@@ -908,6 +909,11 @@ export default {
 
     function handleKeyup(event) {
       keysPressed[event.code] = false
+      if (event.code === 'KeyS') {
+        if (playerState.value === 'block') {
+          playerState.value = 'idle'
+        }
+      }
     }
 
     const speed = 0.5
@@ -916,7 +922,7 @@ export default {
     function updateMovement() {
       if (battleOver.value || introActive.value) return
 
-      const rigidStates = ['jump', 'attack', 'special', 'hit', 'ko']
+      const rigidStates = ['jump', 'attack', 'special', 'hit', 'ko', 'block']
       if (rigidStates.includes(playerState.value)) return
 
       let isMoving = false
@@ -940,7 +946,22 @@ export default {
     function updateAiMovement() {
       if (battleOver.value || introActive.value) return
 
-      const rigidStates = ['jump', 'attack', 'special', 'hit', 'ko']
+      const rigidStates = ['jump', 'attack', 'special', 'hit', 'ko', 'block']
+
+      // AI blocking chance if player is close and attacking
+      const isPlayerAttacking = playerState.value === 'attack' || playerState.value === 'special'
+      if (isPlayerAttacking && getDistance() < 24 && Math.random() < 0.02) {
+        if (!rigidStates.includes(enemyState.value)) {
+          enemyState.value = 'block'
+          setTimeout(() => {
+            if (enemyState.value === 'block' && !battleOver.value) {
+              enemyState.value = 'idle'
+            }
+          }, 380)
+          return
+        }
+      }
+
       if (rigidStates.includes(enemyState.value)) return
 
       const distance = enemyX.value - playerX.value
@@ -1006,9 +1027,7 @@ export default {
       emit,
       playerChar,
       enemyChar,
-      parallaxStyle,
-      layerStyle,
-      lightsStyle,
+      stageBackgroundStyle,
       playerX,
       enemyX,
       playerHp,
@@ -1093,115 +1112,14 @@ export default {
   35% { filter: contrast(1.12) brightness(1.12); }
 }
 
-/* ── PARALLAX ─────────────────────────────────────────────── */
-.parallax-root {
-  position: absolute;
-  inset: -2%;
-  z-index: 0;
-  overflow: hidden;
-  animation: cameraSway 10s ease-in-out infinite alternate;
-}
-
-@keyframes cameraSway {
-  0%, 100% { transform: scale(1.03) translate(0, 0); }
-  50% { transform: scale(1.03) translate(-8px, 4px); }
-}
-
-.stage-bg,
-.stage-mid,
-.stage-fg {
-  position: absolute;
-  inset: -8%;
-  background-image: var(--stage-image);
-  background-size: cover;
-  background-position: center;
-  will-change: transform;
-  transition: transform 0.28s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-}
-
-.stage-bg {
-  filter: blur(3px) saturate(0.6) brightness(0.45) contrast(1.1);
-}
-
-.stage-mid {
-  filter: blur(1.2px) saturate(0.8) brightness(0.62) contrast(1.15);
-  mix-blend-mode: normal;
-}
-
-.stage-fg {
-  filter: saturate(1.05) brightness(0.75) contrast(1.18);
-  -webkit-mask-image: linear-gradient(to top, black 0%, black 35%, transparent 65%);
-  mask-image: linear-gradient(to top, black 0%, black 35%, transparent 65%);
-}
-
-.stage-layer {
+/* ── FIXED BACKGROUND LAYER ─────────────────────────── */
+.stage-background {
   position: absolute;
   inset: 0;
-  pointer-events: none;
-}
-
-.stage-mist {
-  z-index: 2;
-  inset: -14%;
-  opacity: 0.18;
-  filter: blur(24px);
-}
-
-.mist-back {
-  background:
-    radial-gradient(circle at 25% 60%, rgba(255,255,255,0.18), transparent 30%),
-    radial-gradient(circle at 72% 34%, rgba(0,212,255,0.14), transparent 28%);
-  animation: mistDrift 12s ease-in-out infinite alternate;
-}
-
-.mist-front {
-  z-index: 7;
-  opacity: 0.12;
-  background:
-    radial-gradient(circle at 40% 88%, rgba(255,255,255,0.16), transparent 25%),
-    radial-gradient(circle at 80% 82%, rgba(192,57,43,0.12), transparent 30%);
-  animation: mistDriftFront 9s ease-in-out infinite alternate;
-}
-
-@keyframes mistDrift {
-  from { transform: translateX(-3%); }
-  to { transform: translateX(4%); }
-}
-
-@keyframes mistDriftFront {
-  from { transform: translateX(4%) translateY(1%); }
-  to { transform: translateX(-3%) translateY(-1%); }
-}
-
-.stage-lights {
-  z-index: 3;
-  background:
-    radial-gradient(circle at var(--player-x) 62%, rgba(200,168,75,0.14), transparent 20%),
-    radial-gradient(circle at var(--enemy-x) 58%, rgba(0,212,255,0.12), transparent 20%);
-}
-
-.stage-floor-glow {
-  z-index: 4;
-  background:
-    radial-gradient(ellipse 64% 14% at 50% 88%, rgba(240,208,96,0.18), transparent 76%),
-    linear-gradient(to top, rgba(0,0,0,0.38), transparent 28%);
-}
-
-.stage-grain {
-  z-index: 8;
-  opacity: 0.045;
-  background-image:
-    linear-gradient(90deg, rgba(255,255,255,0.32) 1px, transparent 1px),
-    linear-gradient(rgba(255,255,255,0.25) 1px, transparent 1px);
-  background-size: 9px 11px;
-  mix-blend-mode: overlay;
-}
-
-.stage-vignette {
-  z-index: 9;
-  background:
-    radial-gradient(ellipse at center, transparent 42%, rgba(0,0,0,0.48) 78%, rgba(0,0,0,0.8)),
-    linear-gradient(90deg, rgba(0,0,0,0.44), transparent 22%, transparent 78%, rgba(0,0,0,0.44));
+  z-index: 0;
+  background-size: cover;
+  background-position: center bottom;
+  background-repeat: no-repeat;
 }
 
 .screen-flash {
@@ -1278,10 +1196,11 @@ export default {
 }
 
 .hp-bar {
-  width: 220px;
-  height: 16px;
-  background: #0a0a0f;
-  border: 1px solid rgba(200,168,75,0.3);
+  width: 240px;
+  height: 22px;
+  background: #111116;
+  border: 3px solid #000;
+  box-shadow: 0 0 0 1.5px rgba(200,168,75,0.45);
   position: relative;
   overflow: hidden;
 }
@@ -1295,28 +1214,37 @@ export default {
   transition: width 0.4s ease;
 }
 
+.hp-bar::after {
+  content: '';
+  position: absolute;
+  inset: 2px;
+  background: repeating-linear-gradient(90deg, transparent, transparent 7px, #000 7px, #000 9px);
+  pointer-events: none;
+  z-index: 5;
+}
+
 .hp-damage-fill {
-  background: rgba(255,200,0,0.3);
+  background: rgba(255,255,255,0.3);
   transition: width 1.2s ease 0.4s;
 }
 
 .hp-fill.player-hp,
 .hp-fill.enemy-hp {
-  background: linear-gradient(90deg, #8b0000, #c0392b, #e74c3c);
+  background: #00ff66;
 }
 
 .hp-bar.hp-mid .hp-fill {
-  background: linear-gradient(90deg, #7a4800, #c07800, #e09000);
+  background: #ffff00;
 }
 
 .hp-bar.hp-low .hp-fill {
-  background: linear-gradient(90deg, #3a0000, #8b0000);
+  background: #ff0033;
   animation: lowHpPulse 0.4s ease-in-out infinite;
 }
 
 @keyframes lowHpPulse {
   0%,100% { filter: brightness(1); }
-  50% { filter: brightness(1.4); }
+  50% { filter: brightness(1.35); }
 }
 
 .timer-block {
@@ -1383,22 +1311,11 @@ export default {
 
 .arena.visible { opacity: 1; }
 
-.arena-floor {
-  position: absolute;
-  bottom: 7%;
-  left: 0;
-  right: 0;
-  height: 5px;
-  background: linear-gradient(90deg, transparent, var(--blood), var(--gold-dim), var(--blood), transparent);
-  filter: blur(1px);
-  z-index: 1;
-}
-
 /* ── SPRITES ──────────────────────────────────────────────── */
 .fighter-sprite {
   position: absolute;
-  bottom: 7%;
-  translate: -50% 38px;
+  bottom: 7.5%;
+  translate: -50% 0;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -1408,8 +1325,8 @@ export default {
 }
 
 .sprite-img {
-  height: clamp(250px, 48vh, 520px);
-  max-width: min(40vw, 520px);
+  height: 26vh;
+  max-width: min(40vw, 320px);
   object-fit: contain;
   filter: drop-shadow(0 0 18px rgba(0,0,0,0.92));
   transform-origin: center bottom;
@@ -1422,7 +1339,16 @@ export default {
   transition: filter 0.06s;
 }
 
-.fighter-sprite .sprite-img:not(.attack):not(.special):not(.hit):not(.jump):not(.ko) {
+.sprite-img.block {
+  filter: drop-shadow(0 0 20px rgba(240, 208, 96, 0.8)) brightness(1.1) !important;
+  transform: scale(0.96) !important;
+}
+
+.sprite-img.flipped.block {
+  transform: scaleX(-1) scale(0.96) !important;
+}
+
+.fighter-sprite .sprite-img:not(.attack):not(.special):not(.hit):not(.jump):not(.ko):not(.block) {
   animation: idleBreath 2.6s ease-in-out infinite;
 }
 
