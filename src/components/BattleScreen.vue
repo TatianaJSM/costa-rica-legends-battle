@@ -971,13 +971,15 @@ export default {
     }
 
     onMounted(() => {
-      // Preload La Segua acid attack frames to prevent disappearing/flickering
-      if (seguaAnimations && Array.isArray(seguaAnimations.acid)) {
-        seguaAnimations.acid.forEach(src => {
-          const img = new Image()
-          img.src = src
-        })
-      }
+      // Preload La Segua acid attack and jump frames to prevent disappearing/flickering
+      const framesToPreload = [
+        ...(seguaAnimations?.acid || []),
+        ...(seguaAnimations?.jump || [])
+      ]
+      framesToPreload.forEach(src => {
+        const img = new Image()
+        img.src = src
+      })
 
       ready.value = true
       startSpriteLoop('player')

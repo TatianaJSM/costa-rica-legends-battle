@@ -11,9 +11,13 @@ export const seguaAnimations = {
     seguaBase
   ],
 
-  // Usamos la imagen normal para el salto (sin frames raros)
+  // Estos sí son tus frames de salto (5 frames)
   jump: [
-    seguaBase
+    new URL('../assets/images/characters/segua/jump/jump_01.png', import.meta.url).href,
+    new URL('../assets/images/characters/segua/jump/jump_02.png', import.meta.url).href,
+    new URL('../assets/images/characters/segua/jump/jump_03.png', import.meta.url).href,
+    new URL('../assets/images/characters/segua/jump/jump_04.png', import.meta.url).href,
+    new URL('../assets/images/characters/segua/jump/jump_05.png', import.meta.url).href
   ],
 
   // Tanto attack como acid usan los 6 frames para el ataque de ácido
