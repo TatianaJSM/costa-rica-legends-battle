@@ -74,7 +74,10 @@
         :style="{ left: playerX + '%' }"
       >
         <img
-          :src="currentSprite(playerChar, playerState)"
+          v-for="(spriteUrl, idx) in getSpritesFor(playerChar, playerState)"
+          :key="spriteUrl + '-' + idx"
+          v-show="idx === (playerFrame % getSpritesFor(playerChar, playerState).length)"
+          :src="spriteUrl"
           :alt="playerChar.name"
           :class="['sprite-img', playerState, { 'flash-hit': playerFlash }]"
           :style="playerState === 'jump' ? { animationDuration: getJumpDuration(playerChar) + 'ms' } : {}"
@@ -104,7 +107,10 @@
         :style="{ left: enemyX + '%' }"
       >
         <img
-          :src="currentSprite(enemyChar, enemyState)"
+          v-for="(spriteUrl, idx) in getSpritesFor(enemyChar, enemyState)"
+          :key="spriteUrl + '-' + idx"
+          v-show="idx === (enemyFrame % getSpritesFor(enemyChar, enemyState).length)"
+          :src="spriteUrl"
           :alt="enemyChar.name"
           :class="['sprite-img', 'flipped', enemyState, { 'flash-hit': enemyFlash }]"
           :style="enemyState === 'jump' ? { animationDuration: getJumpDuration(enemyChar) + 'ms' } : {}"
@@ -1041,6 +1047,9 @@ export default {
       useCoyol,
       getJumpDuration,
       hpClass,
+      getSpritesFor,
+      playerFrame,
+      enemyFrame,
     }
   },
 }
