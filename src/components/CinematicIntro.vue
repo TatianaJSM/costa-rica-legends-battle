@@ -14,7 +14,9 @@
         autoplay
         playsinline
         class="intro-video-element"
+        @playing="clearWatchdog"
         @ended="handleVideoEnded"
+        @error="handleVideoError"
       ></video>
 
       <button class="btn-skip-intro" @click="skipVideos">
@@ -53,7 +55,7 @@
 </template>
 
 <script>
-import { ref, computed, onMounted, watch, nextTick } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 
 import seguaIntro from '../assets/videos/segua_intro.mp4'
 import cadejosIntro from '../assets/videos/cadejos_intro.mp4'
@@ -98,7 +100,26 @@ export default {
       }
     }
 
+    let watchdogTimer = null
+
+    function startWatchdog() {
+      clearTimeout(watchdogTimer)
+      watchdogTimer = setTimeout(() => {
+        if (videoPlayer.value) {
+          if (videoPlayer.value.paused || videoPlayer.value.currentTime === 0) {
+            console.warn("Watchdog: El video no inició a tiempo en 2 segundos, saltando...")
+            handleVideoEnded()
+          }
+        }
+      }, 2000)
+    }
+
+    function clearWatchdog() {
+      clearTimeout(watchdogTimer)
+    }
+
     function handleVideoEnded() {
+      clearWatchdog()
       if (currentStep.value === 'player-video') {
         if (enemyVideo.value) {
           currentStep.value = 'enemy-video'
@@ -112,7 +133,13 @@ export default {
       }
     }
 
+    function handleVideoError(e) {
+      console.error("Error al cargar o reproducir el video:", e)
+      handleVideoEnded()
+    }
+
     function skipVideos() {
+      clearWatchdog()
       emit('skip')
     }
 
@@ -124,6 +151,7 @@ export default {
 
     // Intentar reproducir el video de forma robusta
     function attemptPlay() {
+      startWatchdog()
       if (videoPlayer.value) {
         videoPlayer.value.play().catch(err => {
           console.warn("Autoplay bloqueado con sonido, intentando con mute...", err)
@@ -147,6 +175,10 @@ export default {
       }
     })
 
+    onUnmounted(() => {
+      clearWatchdog()
+    })
+
     watch(currentVideoSrc, () => {
       nextTick(() => {
         attemptPlay()
@@ -158,6 +190,8 @@ export default {
       currentVideoSrc,
       currentVideoTitle,
       handleVideoEnded,
+      handleVideoError,
+      clearWatchdog,
       skipVideos,
       getCharacterSprite
     }
