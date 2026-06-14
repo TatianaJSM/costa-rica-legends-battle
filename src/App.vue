@@ -25,7 +25,6 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 import HomeScreen from './components/StartScreen.vue'
 import SelectScreen from './components/SelectScreen.vue'
 import BattleScreen from './components/BattleScreen.vue'
-import { preloadAllVideos } from './data/videoCache'
 
 export default {
   name: 'App',
@@ -205,7 +204,6 @@ export default {
     }
 
     onMounted(() => {
-      preloadAllVideos() // Precarga los videos en segundo plano
       initParticles()
       animateParticles()
       window.addEventListener('resize', onResize)
