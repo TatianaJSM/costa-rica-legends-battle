@@ -16,10 +16,7 @@
         "/src/assets/images/characters/segua.png"
       ],
       "jump": [
-        "/src/assets/images/characters/segua/jump/jump_01.png",
-        "/src/assets/images/characters/segua/jump/jump_02.png",
-        "/src/assets/images/characters/segua/jump/jump_03.png",
-        "/src/assets/images/characters/segua/jump/jump_04.png"
+        "/src/assets/images/characters/segua.png"
       ],
       "attack": [
         "/src/assets/images/characters/segua.png"

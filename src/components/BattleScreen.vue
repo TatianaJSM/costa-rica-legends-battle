@@ -371,11 +371,13 @@ export default {
     function getJumpDuration(character) {
       if (character?.type === 'segua') {
         const sprites = getSpritesFor(character, 'jump')
-        let totalDuration = 0
-        for (let i = 0; i < sprites.length; i++) {
-          totalDuration += getFrameDuration(character, 'jump', i)
+        if (sprites.length > 1) {
+          let totalDuration = 0
+          for (let i = 0; i < sprites.length; i++) {
+            totalDuration += getFrameDuration(character, 'jump', i)
+          }
+          return totalDuration > 0 ? totalDuration : 1200
         }
-        return totalDuration > 0 ? totalDuration : 1200
       }
       return 1200
     }
@@ -447,39 +449,57 @@ export default {
     let msgTimer = null
     let enemyVulnerableTimer = null
 
-    const attacks = computed(() => [
-      {
-        id: 1,
-        key: 'J',
-        name: 'Ataque Rápido',
-        damage: 8,
-        type: 'fast',
-        delay: 320,
-        range: 18,
-        note: 'Corto alcance, recuperación veloz.',
-      },
-      {
-        id: 2,
-        key: 'K',
-        name: playerChar.value?.skill || 'Habilidad',
-        damage: 18,
-        type: 'special',
-        delay: 720,
-        range: 34,
-        special: true,
-        note: 'Ataque especial del personaje.',
-      },
-      {
-        id: 3,
-        key: 'L',
-        name: 'Golpe Fuerte',
-        damage: 12,
-        type: 'heavy',
-        delay: 520,
-        range: 20,
-        note: 'Más daño, más compromiso.',
-      },
-    ])
+    const attacks = computed(() => {
+      if (playerChar.value?.type === 'segua') {
+        return [
+          {
+            id: 1,
+            key: 'J',
+            name: 'Ataque Ácido',
+            damage: 20,
+            type: 'special',
+            delay: 720,
+            range: 34,
+            special: true,
+            note: 'Lanza un grito y escupe un chorro de ácido corrosivo.',
+          }
+        ]
+      }
+
+      return [
+        {
+          id: 1,
+          key: 'J',
+          name: 'Ataque Rápido',
+          damage: 8,
+          type: 'fast',
+          delay: 320,
+          range: 18,
+          note: 'Corto alcance, recuperación veloz.',
+        },
+        {
+          id: 2,
+          key: 'K',
+          name: playerChar.value?.skill || 'Habilidad',
+          damage: 18,
+          type: 'special',
+          delay: 720,
+          range: 34,
+          special: true,
+          note: 'Ataque especial del personaje.',
+        },
+        {
+          id: 3,
+          key: 'L',
+          name: 'Golpe Fuerte',
+          damage: 12,
+          type: 'heavy',
+          delay: 520,
+          range: 20,
+          note: 'Más daño, más compromiso.',
+        },
+      ]
+    })
 
     const specialEffectStyle = computed(() => {
       const left = specialDirection.value === 'from-player' ? playerX.value : enemyX.value
@@ -525,7 +545,7 @@ export default {
       }
 
       if (character?.type === 'segua') {
-        return { effect: 'acidSpit', message: 'Grito ácido', damage: 20, shake: 'strong' }
+        return { effect: '', message: 'Ataque Ácido', damage: 20, shake: 'strong' }
       }
 
       if (character?.type === 'cadejos') {
@@ -536,6 +556,7 @@ export default {
     }
 
     async function performAttack(attacker, attack) {
+      if (!attack) return
       if (battleOver.value || introActive.value) return
       if (attacker === 'player' && !canAttack.value) return
 
@@ -761,24 +782,37 @@ export default {
         if (Math.random() > 0.78) {
           await jump('enemy')
         } else {
-          const enemyAtk = Math.random() > 0.72
-            ? {
-                id: 2,
-                name: enemyChar.value?.skill || 'Especial',
-                damage: 15,
-                type: 'special',
-                delay: 680,
-                range: 32,
-                special: true,
-              }
-            : {
-                id: 1,
-                name: 'Zarpazo',
-                damage: Math.floor(Math.random() * 8) + 6,
-                type: 'fast',
-                delay: 360,
-                range: 18,
-              }
+          let enemyAtk
+          if (enemyChar.value?.type === 'segua') {
+            enemyAtk = {
+              id: 1,
+              name: 'Ataque Ácido',
+              damage: 20,
+              type: 'special',
+              delay: 720,
+              range: 34,
+              special: true,
+            }
+          } else {
+            enemyAtk = Math.random() > 0.72
+              ? {
+                  id: 2,
+                  name: enemyChar.value?.skill || 'Especial',
+                  damage: 15,
+                  type: 'special',
+                  delay: 680,
+                  range: 32,
+                  special: true,
+                }
+              : {
+                  id: 1,
+                  name: 'Zarpazo',
+                  damage: Math.floor(Math.random() * 8) + 6,
+                  type: 'fast',
+                  delay: 360,
+                  range: 18,
+                }
+          }
 
           await performAttack('enemy', enemyAtk)
         }

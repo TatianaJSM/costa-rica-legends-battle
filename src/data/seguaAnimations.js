@@ -11,27 +11,23 @@ export const seguaAnimations = {
     seguaBase
   ],
 
-  // Estos sí son tus frames de salto (5 frames)
+  // Usamos la imagen normal para el salto (sin frames raros)
   jump: [
-    new URL('../assets/images/characters/segua/jump/jump_01.png', import.meta.url).href,
-    new URL('../assets/images/characters/segua/jump/jump_02.png', import.meta.url).href,
-    new URL('../assets/images/characters/segua/jump/jump_03.png', import.meta.url).href,
-    new URL('../assets/images/characters/segua/jump/jump_04.png', import.meta.url).href,
-    new URL('../assets/images/characters/segua/jump/jump_05.png', import.meta.url).href
+    seguaBase
   ],
 
-  // Tus frames de ataque (6 frames)
+  // Mientras no tengas frames de ataque físico, usamos la imagen normal
   attack: [
+    seguaBase
+  ],
+
+  // Usamos tus 6 frames para el ataque ácido
+  acid: [
     new URL('../assets/images/characters/segua/attack/atack_01.png', import.meta.url).href,
     new URL('../assets/images/characters/segua/attack/atack_02.png', import.meta.url).href,
     new URL('../assets/images/characters/segua/attack/atack_03.png', import.meta.url).href,
     new URL('../assets/images/characters/segua/attack/atack_04.png', import.meta.url).href,
     new URL('../assets/images/characters/segua/attack/atack_05.png', import.meta.url).href,
     new URL('../assets/images/characters/segua/attack/atack_06.png', import.meta.url).href
-  ],
-
-  // Mientras no tengas frames de ácido, usamos la imagen normal
-  acid: [
-    seguaBase
   ]
 }
