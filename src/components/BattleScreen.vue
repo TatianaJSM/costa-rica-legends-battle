@@ -245,9 +245,8 @@ const FRAME_DURATIONS = {
   idle: [180, 180, 180],
   walk: [120, 120, 120, 120],
   jump: [120, 350, 450, 350, 140],
-  attack: [100, 100, 120, 120, 130, 150],
-  acid: [120, 130, 160, 180, 200],
-  special: [120, 130, 160, 180, 200],
+  acid: [60, 60, 60, 60, 60, 60],
+  special: [60, 60, 60, 60, 60, 60],
   hit: [120],
   ko: [160],
 }
@@ -966,6 +965,14 @@ export default {
     }
 
     onMounted(() => {
+      // Preload La Segua acid attack frames to prevent disappearing/flickering
+      if (seguaAnimations && Array.isArray(seguaAnimations.acid)) {
+        seguaAnimations.acid.forEach(src => {
+          const img = new Image()
+          img.src = src
+        })
+      }
+
       ready.value = true
       startSpriteLoop('player')
       startSpriteLoop('enemy')
