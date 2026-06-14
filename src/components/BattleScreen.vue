@@ -219,7 +219,7 @@
 </template>
 
 <script>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import CinematicIntro from './CinematicIntro.vue'
 import { seguaAnimations } from '../data/seguaAnimations'
 
@@ -332,9 +332,17 @@ export default {
     let playerFrameTimer = null
     let enemyFrameTimer = null
 
+    watch(playerState, () => {
+      startSpriteLoop('player')
+    })
+
+    watch(enemyState, () => {
+      startSpriteLoop('enemy')
+    })
+
     function getAnimationState(character, state) {
-      // Para La Segua, el estado special usa los frames del ácido.
-      if (character?.type === 'segua' && state === 'special') return 'acid'
+      // Para La Segua, tanto special como attack usan los frames del ácido.
+      if (character?.type === 'segua' && (state === 'special' || state === 'attack')) return 'acid'
       return state
     }
 
@@ -410,20 +418,7 @@ export default {
       nextFrame()
     }
 
-    let prevPlayerState = playerState.value
-    let prevEnemyState = enemyState.value
-
-    function tickStates() {
-      if (playerState.value !== prevPlayerState) {
-        prevPlayerState = playerState.value
-        startSpriteLoop('player')
-      }
-
-      if (enemyState.value !== prevEnemyState) {
-        prevEnemyState = enemyState.value
-        startSpriteLoop('enemy')
-      }
-    }
+    // State transitions are now handled reactively via watch
 
     function currentSprite(character, state) {
       const sprites = getSpritesFor(character, state)
@@ -893,9 +888,15 @@ export default {
         jump('player')
       }
 
-      if (event.code === 'KeyJ') playerAttack(attacks.value[0])
-      if (event.code === 'KeyK') playerAttack(attacks.value[1])
-      if (event.code === 'KeyL') playerAttack(attacks.value[2])
+      if (playerChar.value?.type === 'segua') {
+        // Para La Segua, solo la tecla J realiza ataque
+        if (event.code === 'KeyJ') playerAttack(attacks.value[0])
+      } else {
+        if (event.code === 'KeyJ') playerAttack(attacks.value[0])
+        if (event.code === 'KeyK') playerAttack(attacks.value[1])
+        if (event.code === 'KeyL') playerAttack(attacks.value[2])
+      }
+
       if (event.code === 'KeyC') useCoyol()
     }
 
@@ -960,7 +961,6 @@ export default {
     function gameLoop() {
       updateMovement()
       updateAiMovement()
-      tickStates()
       rafId = requestAnimationFrame(gameLoop)
     }
 

@@ -16,12 +16,16 @@ export const seguaAnimations = {
     seguaBase
   ],
 
-  // Mientras no tengas frames de ataque físico, usamos la imagen normal
+  // Tanto attack como acid usan los 6 frames para el ataque de ácido
   attack: [
-    seguaBase
+    new URL('../assets/images/characters/segua/attack/atack_01.png', import.meta.url).href,
+    new URL('../assets/images/characters/segua/attack/atack_02.png', import.meta.url).href,
+    new URL('../assets/images/characters/segua/attack/atack_03.png', import.meta.url).href,
+    new URL('../assets/images/characters/segua/attack/atack_04.png', import.meta.url).href,
+    new URL('../assets/images/characters/segua/attack/atack_05.png', import.meta.url).href,
+    new URL('../assets/images/characters/segua/attack/atack_06.png', import.meta.url).href
   ],
 
-  // Usamos tus 6 frames para el ataque ácido
   acid: [
     new URL('../assets/images/characters/segua/attack/atack_01.png', import.meta.url).href,
     new URL('../assets/images/characters/segua/attack/atack_02.png', import.meta.url).href,
