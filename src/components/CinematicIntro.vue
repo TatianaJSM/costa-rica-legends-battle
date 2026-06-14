@@ -57,9 +57,9 @@
 <script>
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 
-import seguaIntro from '../assets/videos/segua_intro.mp4'
-import cadejosIntro from '../assets/videos/cadejos_intro.mp4'
-import padreIntro from '../assets/videos/padre_intro.mp4'
+const seguaIntro = new URL('../assets/videos/segua_intro.mp4', import.meta.url).href
+const cadejosIntro = new URL('../assets/videos/cadejos_intro.mp4', import.meta.url).href
+const padreIntro = new URL('../assets/videos/padre_intro.mp4', import.meta.url).href
 
 const videoMap = {
   segua: seguaIntro,
@@ -101,16 +101,13 @@ export default {
     }
 
     let watchdogTimer = null
+    let transitioning = false
 
     function startWatchdog() {
       clearTimeout(watchdogTimer)
       watchdogTimer = setTimeout(() => {
-        if (videoPlayer.value) {
-          if (videoPlayer.value.paused || videoPlayer.value.currentTime === 0) {
-            console.warn("Watchdog: El video no inició a tiempo en 2 segundos, saltando...")
-            handleVideoEnded()
-          }
-        }
+        console.warn("Watchdog: El video no inició a tiempo, forzando continuación...")
+        handleVideoEnded()
       }, 2000)
     }
 
@@ -119,7 +116,14 @@ export default {
     }
 
     function handleVideoEnded() {
+      if (transitioning) return
+      transitioning = true
       clearWatchdog()
+
+      setTimeout(() => {
+        transitioning = false
+      }, 200)
+
       if (currentStep.value === 'player-video') {
         if (enemyVideo.value) {
           currentStep.value = 'enemy-video'
