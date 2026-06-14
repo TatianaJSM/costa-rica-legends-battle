@@ -6,12 +6,12 @@
   >
     <!-- ── PARALLAX LAYERS ───────────────────────────────── -->
     <div class="parallax-root" :style="parallaxStyle">
-      <div class="stage-layer stage-bg"      :style="layerStyle(0.08)"></div>
-      <div class="stage-layer stage-mid"     :style="layerStyle(0.22)"></div>
-      <div class="stage-layer stage-fg"      :style="layerStyle(0.45)"></div>
+      <div class="stage-layer stage-bg" :style="layerStyle(0.08)"></div>
+      <div class="stage-layer stage-mid" :style="layerStyle(0.22)"></div>
+      <div class="stage-layer stage-fg" :style="layerStyle(0.45)"></div>
     </div>
 
-    <!-- efectos atmosféricos fijos (no se mueven con parallax) -->
+    <!-- efectos atmosféricos fijos -->
     <div class="stage-layer stage-mist mist-back"></div>
     <div class="stage-layer stage-mist mist-front"></div>
     <div class="stage-layer stage-lights" :style="lightsStyle"></div>
@@ -36,7 +36,7 @@
         <div class="hp-bar-wrap">
           <div class="hp-bar" :class="hpClass(playerHp)">
             <div class="hp-damage-fill" :style="{ width: playerDmgBar + '%' }"></div>
-            <div class="hp-fill player-hp"  :style="{ width: playerHp + '%' }"></div>
+            <div class="hp-fill player-hp" :style="{ width: playerHp + '%' }"></div>
           </div>
           <div class="hp-label">{{ Math.round(playerHp) }}%</div>
         </div>
@@ -57,7 +57,7 @@
           <div class="hp-label">{{ Math.round(enemyHp) }}%</div>
           <div class="hp-bar" :class="hpClass(enemyHp)">
             <div class="hp-damage-fill" :style="{ width: enemyDmgBar + '%' }"></div>
-            <div class="hp-fill enemy-hp"  :style="{ width: enemyHp + '%' }"></div>
+            <div class="hp-fill enemy-hp" :style="{ width: enemyHp + '%' }"></div>
           </div>
         </div>
       </div>
@@ -65,20 +65,19 @@
 
     <!-- ── ARENA ─────────────────────────────────────────── -->
     <div class="arena" :class="{ visible: ready && !introActive }">
-
-      <!-- Piso / línea de combate -->
       <div class="arena-floor"></div>
 
       <!-- JUGADOR -->
       <div
         class="fighter-sprite player"
-        :class="[playerChar.type, { vulnerable: playerVulnerable, flipped: false }]"
+        :class="[playerChar.type, { vulnerable: playerVulnerable }]"
         :style="{ left: playerX + '%' }"
       >
         <img
           :src="currentSprite(playerChar, playerState)"
           :alt="playerChar.name"
           :class="['sprite-img', playerState, { 'flash-hit': playerFlash }]"
+          :style="playerState === 'jump' ? { animationDuration: getJumpDuration(playerChar) + 'ms' } : {}"
           loading="eager"
           decoding="async"
           @error="onSpriteError($event, playerChar)"
@@ -108,6 +107,7 @@
           :src="currentSprite(enemyChar, enemyState)"
           :alt="enemyChar.name"
           :class="['sprite-img', 'flipped', enemyState, { 'flash-hit': enemyFlash }]"
+          :style="enemyState === 'jump' ? { animationDuration: getJumpDuration(enemyChar) + 'ms' } : {}"
           loading="eager"
           decoding="async"
           @error="onSpriteError($event, enemyChar)"
@@ -153,6 +153,7 @@
             <span>Lista de movimientos</span>
             <button class="close-moves" @click="showMoveMenu = false">✕</button>
           </div>
+
           <div class="move-list">
             <button
               v-for="atk in attacks"
@@ -220,37 +221,51 @@
 <script>
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import CinematicIntro from './CinematicIntro.vue'
+import { seguaAnimations } from '../data/seguaAnimations'
 
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms))
 const clamp = (v, min, max) => Math.min(max, Math.max(min, v))
 
-// ─── Velocidades de frame por estado (ms por frame) ───────────
+// Velocidades generales de sprites.
 const FRAME_MS = {
-  idle:    160,
-  walk:    100,
-  run:     70,
-  jump:    90,
-  attack:  80,
+  idle: 160,
+  walk: 100,
+  run: 70,
+  jump: 90,
+  attack: 80,
   special: 70,
-  hit:     90,
-  ko:      120,
+  acid: 90,
+  hit: 90,
+  ko: 120,
+}
+
+// Duraciones específicas por frame para La Segua.
+// Aquí jump_02 y jump_03 duran más para que el salto se note.
+const FRAME_DURATIONS = {
+  idle: [180, 180, 180],
+  walk: [120, 120, 120, 120],
+  jump: [120, 350, 450, 350, 140],
+  attack: [100, 100, 120, 120, 130, 150],
+  acid: [120, 130, 160, 180, 200],
+  special: [120, 130, 160, 180, 200],
+  hit: [120],
+  ko: [160],
 }
 
 export default {
   name: 'BattleScreen',
   components: { CinematicIntro },
   props: {
-    characters:        { type: Array,  default: () => [] },
+    characters: { type: Array, default: () => [] },
     selectedCharacter: { type: Object, default: null },
-    selectedStage:     { type: Object, default: null },
+    selectedStage: { type: Object, default: null },
   },
   emits: ['go-to'],
 
   setup(props, { emit }) {
     // ── Personajes ─────────────────────────────────────────────
-    const playerChar = computed(() =>
-      props.selectedCharacter || props.characters[0] || {}
-    )
+    const playerChar = computed(() => props.selectedCharacter || props.characters[0] || {})
+
     const enemyChar = computed(() => {
       const others = (props.characters || []).filter(c => c.id !== playerChar.value?.id)
       return others[Math.floor(Math.random() * others.length)] || props.characters[1] || props.characters[0] || {}
@@ -258,122 +273,168 @@ export default {
 
     // ── Posiciones ─────────────────────────────────────────────
     const playerX = ref(22)
-    const enemyX  = ref(76)
+    const enemyX = ref(76)
 
     // ── PARALLAX ───────────────────────────────────────────────
-    // El parallax se calcula desde el centro del combate
     const parallaxOffset = computed(() => {
-      const center = (playerX.value + enemyX.value) / 2  // 0-100
-      return (center - 50) * -1.4  // px de desplazamiento total
+      const center = (playerX.value + enemyX.value) / 2
+      return (center - 50) * -1.4
     })
 
     const parallaxStyle = computed(() => ({
       '--stage-image': `url(${props.selectedStage?.image || '/src/assets/images/backgrounds/cafetal.png'})`,
     }))
 
-    // Cada capa recibe un factor diferente para el efecto parallax
     function layerStyle(factor) {
-      return { transform: `translateX(${parallaxOffset.value * factor}px) scale(1.08)` }
+      return {
+        transform: `translateX(${parallaxOffset.value * factor}px) scale(1.08)`,
+      }
     }
 
     const lightsStyle = computed(() => ({
       '--player-x': `${playerX.value}%`,
-      '--enemy-x':  `${enemyX.value}%`,
+      '--enemy-x': `${enemyX.value}%`,
     }))
 
     // ── HP / Combate ───────────────────────────────────────────
-    const playerHp      = ref(100)
-    const enemyHp       = ref(100)
-    const playerDmgBar  = ref(100)
-    const enemyDmgBar   = ref(100)
-    const timeLeft      = ref(60)
-    const round         = ref(1)
-    const ready         = ref(false)
-    const canAttack     = ref(false)
-    const battleOver    = ref(false)
-    const winner        = ref(null)
-    const flashActive   = ref(false)
-    const zoomHit       = ref(false)
-    const cameraClass   = ref('')
+    const playerHp = ref(100)
+    const enemyHp = ref(100)
+    const playerDmgBar = ref(100)
+    const enemyDmgBar = ref(100)
+    const timeLeft = ref(60)
+    const round = ref(1)
+    const ready = ref(false)
+    const canAttack = ref(false)
+    const battleOver = ref(false)
+    const winner = ref(null)
+    const flashActive = ref(false)
+    const zoomHit = ref(false)
+    const cameraClass = ref('')
     const battleMessage = ref('')
-    const messageType   = ref('')
+    const messageType = ref('')
     const damageNumbers = ref([])
     const specialEffect = ref('')
     const specialDirection = ref('from-player')
-    const coyolUsed     = ref(false)
-    const showMoveMenu  = ref(false)
-    const introActive   = ref(true)
-    const introPhase    = ref(1)
+    const coyolUsed = ref(false)
+    const showMoveMenu = ref(false)
+    const introActive = ref(true)
+    const introPhase = ref(1)
     const playerVulnerable = ref(false)
-    const enemyVulnerable  = ref(false)
+    const enemyVulnerable = ref(false)
 
     // ── Sprites animados ───────────────────────────────────────
-    // Cada personaje tiene su propio índice de frame y timestamp
-    const playerState   = ref('idle')
-    const enemyState    = ref('idle')
-    const playerFrame   = ref(0)
-    const enemyFrame    = ref(0)
-    const playerFlash   = ref(false)
-    const enemyFlash    = ref(false)
+    const playerState = ref('idle')
+    const enemyState = ref('idle')
+    const playerFrame = ref(0)
+    const enemyFrame = ref(0)
+    const playerFlash = ref(false)
+    const enemyFlash = ref(false)
 
     let playerFrameTimer = null
-    let enemyFrameTimer  = null
+    let enemyFrameTimer = null
+
+    function getAnimationState(character, state) {
+      // Para La Segua, el estado special usa los frames del ácido.
+      if (character?.type === 'segua' && state === 'special') return 'acid'
+      return state
+    }
+
+    function getSpritesFor(character, state) {
+      const animationState = getAnimationState(character, state)
+
+      // La Segua usa los frames nuevos de src/assets/images/characters/segua/...
+      if (character?.type === 'segua') {
+        const seguaFrames = seguaAnimations[animationState]
+        if (Array.isArray(seguaFrames) && seguaFrames.length > 0) return seguaFrames
+      }
+
+      // El Padre y Cadejos siguen usando sprites del JSON si existen.
+      const sprites = character?.sprites?.[state]
+      if (Array.isArray(sprites) && sprites.length > 0) return sprites
+
+      return character?.sprites?.idle || [character?.image || '']
+    }
+
+    function getFrameDuration(character, state, frameIndex) {
+      const animationState = getAnimationState(character, state)
+
+      if (character?.type === 'segua') {
+        const durations = FRAME_DURATIONS[animationState]
+        if (Array.isArray(durations) && durations[frameIndex] !== undefined) {
+          return durations[frameIndex]
+        }
+      }
+
+      return FRAME_MS[state] || 120
+    }
+
+    function getJumpDuration(character) {
+      if (character?.type === 'segua') {
+        const sprites = getSpritesFor(character, 'jump')
+        let totalDuration = 0
+        for (let i = 0; i < sprites.length; i++) {
+          totalDuration += getFrameDuration(character, 'jump', i)
+        }
+        return totalDuration > 0 ? totalDuration : 1200
+      }
+      return 1200
+    }
 
     function startSpriteLoop(who) {
       const stateRef = who === 'player' ? playerState : enemyState
       const frameRef = who === 'player' ? playerFrame : enemyFrame
-      const char     = who === 'player' ? playerChar  : enemyChar
+      const char = who === 'player' ? playerChar : enemyChar
 
-      const clearFn = who === 'player'
-        ? () => { clearInterval(playerFrameTimer) }
-        : () => { clearInterval(enemyFrameTimer) }
-
-      clearFn()
-
-      const state   = stateRef.value
-      const sprites = char.value?.sprites?.[state]
-      const count   = Array.isArray(sprites) ? sprites.length : 1
-      const ms      = FRAME_MS[state] || 120
+      if (who === 'player') clearTimeout(playerFrameTimer)
+      else clearTimeout(enemyFrameTimer)
 
       frameRef.value = 0
 
-      const interval = setInterval(() => {
-        frameRef.value = (frameRef.value + 1) % count
-      }, ms)
+      function nextFrame() {
+        const state = stateRef.value
+        const character = char.value
+        const sprites = getSpritesFor(character, state)
+        const count = sprites.length || 1
+        const duration = getFrameDuration(character, state, frameRef.value)
 
-      if (who === 'player') playerFrameTimer = interval
-      else                  enemyFrameTimer  = interval
+        const timer = setTimeout(() => {
+          frameRef.value = (frameRef.value + 1) % count
+          nextFrame()
+        }, duration)
+
+        if (who === 'player') playerFrameTimer = timer
+        else enemyFrameTimer = timer
+      }
+
+      nextFrame()
     }
 
-    // Watchers manuales: reiniciar loop cuando cambia el estado
     let prevPlayerState = playerState.value
-    let prevEnemyState  = enemyState.value
+    let prevEnemyState = enemyState.value
 
     function tickStates() {
       if (playerState.value !== prevPlayerState) {
         prevPlayerState = playerState.value
         startSpriteLoop('player')
       }
+
       if (enemyState.value !== prevEnemyState) {
         prevEnemyState = enemyState.value
         startSpriteLoop('enemy')
       }
     }
 
-    // Función que devuelve la imagen actual del sprite
     function currentSprite(character, state) {
-      const sprites = character?.sprites?.[state]
-      if (!Array.isArray(sprites) || sprites.length === 0) {
-        return character?.sprites?.idle?.[0] || character?.image || ''
-      }
+      const sprites = getSpritesFor(character, state)
       const frameRef = character?.id === playerChar.value?.id ? playerFrame : enemyFrame
       const idx = frameRef.value % sprites.length
-      return sprites[idx]
+      return sprites[idx] || character?.image || ''
     }
 
     function onSpriteError(event, character) {
-      // Si el sprite frame falla, intenta el fallback idle o la imagen estática
-      const fallback = character?.sprites?.idle?.[0] || character?.image
+      const idleSprites = getSpritesFor(character, 'idle')
+      const fallback = idleSprites?.[0] || character?.image
+
       if (event?.target && fallback && event.target.src !== fallback) {
         event.target.src = fallback
       }
@@ -382,19 +443,48 @@ export default {
     // ── Ataques ────────────────────────────────────────────────
     let dmgIdCounter = 0
     let timerInterval = null
-    let aiTimeout     = null
-    let msgTimer      = null
+    let aiTimeout = null
+    let msgTimer = null
     let enemyVulnerableTimer = null
 
     const attacks = computed(() => [
-      { id: 1, key: 'J', name: 'Ataque Rápido',              damage: 8,  type: 'fast',    delay: 320, range: 18, note: 'Corto alcance, recuperación veloz.' },
-      { id: 2, key: 'K', name: playerChar.value?.skill || 'Habilidad', damage: 18, type: 'special', delay: 720, range: 34, special: true, note: 'Ataque especial del personaje.' },
-      { id: 3, key: 'L', name: 'Golpe Fuerte',               damage: 12, type: 'heavy',   delay: 520, range: 20, note: 'Más daño, más compromiso.' },
+      {
+        id: 1,
+        key: 'J',
+        name: 'Ataque Rápido',
+        damage: 8,
+        type: 'fast',
+        delay: 320,
+        range: 18,
+        note: 'Corto alcance, recuperación veloz.',
+      },
+      {
+        id: 2,
+        key: 'K',
+        name: playerChar.value?.skill || 'Habilidad',
+        damage: 18,
+        type: 'special',
+        delay: 720,
+        range: 34,
+        special: true,
+        note: 'Ataque especial del personaje.',
+      },
+      {
+        id: 3,
+        key: 'L',
+        name: 'Golpe Fuerte',
+        damage: 12,
+        type: 'heavy',
+        delay: 520,
+        range: 20,
+        note: 'Más daño, más compromiso.',
+      },
     ])
 
     const specialEffectStyle = computed(() => {
-      const left  = specialDirection.value === 'from-player' ? playerX.value : enemyX.value
+      const left = specialDirection.value === 'from-player' ? playerX.value : enemyX.value
       const width = Math.max(12, Math.abs(enemyX.value - playerX.value))
+
       return {
         left: `${Math.min(playerX.value, enemyX.value)}%`,
         width: `${width}%`,
@@ -402,11 +492,17 @@ export default {
       }
     })
 
-    function getDistance()      { return Math.abs(enemyX.value - playerX.value) }
-    function isInRange(range)   { return getDistance() <= range }
+    function getDistance() {
+      return Math.abs(enemyX.value - playerX.value)
+    }
+
+    function isInRange(range) {
+      return getDistance() <= range
+    }
 
     async function approachTarget(attacker, range = 18) {
       if (isInRange(range)) return
+
       if (attacker === 'player') {
         playerState.value = 'walk'
         playerX.value = clamp(enemyX.value - range + 3, 8, 48)
@@ -414,18 +510,28 @@ export default {
         enemyState.value = 'walk'
         enemyX.value = clamp(playerX.value + range - 3, 52, 92)
       }
+
       await sleep(360)
     }
 
     function applyKnockback(target, power = 4) {
       if (target === 'enemy') enemyX.value = clamp(enemyX.value + power, 52, 92)
-      else                    playerX.value = clamp(playerX.value - power, 8, 48)
+      else playerX.value = clamp(playerX.value - power, 8, 48)
     }
 
     function specialFor(character) {
-      if (character?.type === 'padre')   return { effect: 'headThrow',   message: 'Cabeza espectral',  damage: 24, shake: 'strong' }
-      if (character?.type === 'segua')   return { effect: 'acidSpit',    message: 'Grito espectral',   damage: 20, shake: 'strong' }
-      if (character?.type === 'cadejos') return { effect: 'chainStrike', message: 'Cadenas sombrías',  damage: 22, shake: 'strong' }
+      if (character?.type === 'padre') {
+        return { effect: 'headThrow', message: 'Cabeza espectral', damage: 24, shake: 'strong' }
+      }
+
+      if (character?.type === 'segua') {
+        return { effect: 'acidSpit', message: 'Grito ácido', damage: 20, shake: 'strong' }
+      }
+
+      if (character?.type === 'cadejos') {
+        return { effect: 'chainStrike', message: 'Cadenas sombrías', damage: 22, shake: 'strong' }
+      }
+
       return { effect: 'deadlyBite', message: 'Ataque especial', damage: 18, shake: 'strong' }
     }
 
@@ -433,7 +539,7 @@ export default {
       if (battleOver.value || introActive.value) return
       if (attacker === 'player' && !canAttack.value) return
 
-      const isPlayer    = attacker === 'player'
+      const isPlayer = attacker === 'player'
       const attackerChar = isPlayer ? playerChar.value : enemyChar.value
       const range = attack.range || (attack.special ? 34 : 18)
 
@@ -446,15 +552,15 @@ export default {
       stateRef.value = attack.special ? 'special' : 'attack'
       specialDirection.value = isPlayer ? 'from-player' : 'from-enemy'
 
-      let damage  = attack.damage
+      let damage = attack.damage
       let message = attack.name
-      let shake   = attack.special ? 'strong' : 'light'
+      let shake = attack.special ? 'strong' : 'light'
 
       if (attack.special) {
         const sp = specialFor(attackerChar)
-        damage  = sp.damage
+        damage = sp.damage
         message = sp.message
-        shake   = sp.shake
+        shake = sp.shake
         specialEffect.value = sp.effect
       }
 
@@ -469,12 +575,15 @@ export default {
 
       if (isInRange(range + 5)) {
         doHit(attacker, damage, attack.special, shake)
+
         if (attack.special && attackerChar?.type === 'segua' && isPlayer && !battleOver.value) {
           enemyVulnerable.value = true
           spawnDamageNumber('Vulnerable', enemyX.value, 44, 'vulnerable')
           showMessage('Vulnerable', 'vulnerable')
           clearTimeout(enemyVulnerableTimer)
-          enemyVulnerableTimer = setTimeout(() => { enemyVulnerable.value = false }, 4200)
+          enemyVulnerableTimer = setTimeout(() => {
+            enemyVulnerable.value = false
+          }, 4200)
         }
       } else {
         showMessage('MISS', 'hit')
@@ -482,52 +591,95 @@ export default {
 
       await sleep(attack.delay)
       specialEffect.value = ''
+
       if (!battleOver.value) stateRef.value = 'idle'
       if (isPlayer && !battleOver.value) canAttack.value = true
     }
 
-    function playerAttack(atk) { performAttack('player', atk) }
+    function playerAttack(atk) {
+      performAttack('player', atk)
+    }
 
     function doHit(attacker, damage, strong = false, shake = 'light') {
       if (battleOver.value) return
+
       triggerFeedback(shake, strong)
 
       if (attacker === 'player') {
         enemyState.value = 'hit'
         enemyFlash.value = true
-        setTimeout(() => { enemyFlash.value = false }, 200)
+
+        setTimeout(() => {
+          enemyFlash.value = false
+        }, 200)
+
         enemyHp.value = Math.max(0, enemyHp.value - damage)
         spawnDamageNumber(damage, enemyX.value, 32, 'enemy-dmg')
         applyKnockback('enemy', strong ? 6 : 3)
-        setTimeout(() => { enemyDmgBar.value = enemyHp.value }, 400)
-        setTimeout(() => { if (!battleOver.value) enemyState.value = 'idle' }, 320)
+
+        setTimeout(() => {
+          enemyDmgBar.value = enemyHp.value
+        }, 400)
+
+        setTimeout(() => {
+          if (!battleOver.value) enemyState.value = 'idle'
+        }, 320)
+
         showMessage(`-${damage}% HP`, 'hit')
-        if (enemyHp.value <= 0) { enemyState.value = 'ko'; endBattle('player') }
+
+        if (enemyHp.value <= 0) {
+          enemyState.value = 'ko'
+          endBattle('player')
+        }
       } else {
         playerState.value = 'hit'
         playerFlash.value = true
-        setTimeout(() => { playerFlash.value = false }, 200)
+
+        setTimeout(() => {
+          playerFlash.value = false
+        }, 200)
+
         playerHp.value = Math.max(0, playerHp.value - damage)
         spawnDamageNumber(damage, playerX.value, 32, 'player-dmg')
         applyKnockback('player', strong ? 6 : 3)
-        setTimeout(() => { playerDmgBar.value = playerHp.value }, 400)
-        setTimeout(() => { if (!battleOver.value) playerState.value = 'idle' }, 320)
+
+        setTimeout(() => {
+          playerDmgBar.value = playerHp.value
+        }, 400)
+
+        setTimeout(() => {
+          if (!battleOver.value) playerState.value = 'idle'
+        }, 320)
+
         showMessage(`-${damage}% HP`, 'hit')
-        if (playerHp.value <= 0) { playerState.value = 'ko'; endBattle('enemy') }
+
+        if (playerHp.value <= 0) {
+          playerState.value = 'ko'
+          endBattle('enemy')
+        }
       }
     }
 
     async function jump(fighter = 'player') {
       if (battleOver.value || introActive.value) return
+
       const stateRef = fighter === 'player' ? playerState : enemyState
       if (stateRef.value === 'jump') return
+
       stateRef.value = 'jump'
-      await sleep(680)
-      if (!battleOver.value && stateRef.value === 'jump') stateRef.value = 'idle'
+
+      const char = fighter === 'player' ? playerChar.value : enemyChar.value
+      const duration = getJumpDuration(char)
+      await sleep(duration)
+
+      if (!battleOver.value && stateRef.value === 'jump') {
+        stateRef.value = 'idle'
+      }
     }
 
     function useCoyol() {
       if (battleOver.value || introActive.value || coyolUsed.value) return
+
       playerHp.value = Math.min(100, playerHp.value + 15)
       playerDmgBar.value = playerHp.value
       coyolUsed.value = true
@@ -537,6 +689,7 @@ export default {
 
     function spawnDamageNumber(amount, x, y, type) {
       const id = ++dmgIdCounter
+
       damageNumbers.value.push({
         id,
         text: typeof amount === 'number' ? `-${amount}%` : amount,
@@ -544,6 +697,7 @@ export default {
         y: y + (Math.random() - 0.5) * 8,
         type,
       })
+
       setTimeout(() => {
         damageNumbers.value = damageNumbers.value.filter(d => d.id !== id)
       }, 950)
@@ -553,15 +707,25 @@ export default {
       flashActive.value = true
       zoomHit.value = strong
       cameraClass.value = power === 'strong' ? 'shaking strong' : 'shaking'
-      setTimeout(() => { flashActive.value = false }, 90)
-      setTimeout(() => { zoomHit.value = false; cameraClass.value = '' }, strong ? 340 : 190)
+
+      setTimeout(() => {
+        flashActive.value = false
+      }, 90)
+
+      setTimeout(() => {
+        zoomHit.value = false
+        cameraClass.value = ''
+      }, strong ? 340 : 190)
     }
 
     function showMessage(text, type = 'normal') {
       battleMessage.value = text
-      messageType.value   = type
+      messageType.value = type
       clearTimeout(msgTimer)
-      msgTimer = setTimeout(() => { battleMessage.value = '' }, 900)
+
+      msgTimer = setTimeout(() => {
+        battleMessage.value = ''
+      }, 900)
     }
 
     function hpClass(hp) {
@@ -572,9 +736,12 @@ export default {
 
     function startTimer() {
       clearInterval(timerInterval)
+
       timerInterval = setInterval(() => {
         if (battleOver.value || introActive.value) return
+
         timeLeft.value--
+
         if (timeLeft.value <= 0) {
           clearInterval(timerInterval)
           endBattle(playerHp.value >= enemyHp.value ? 'player' : 'enemy')
@@ -585,25 +752,45 @@ export default {
     function scheduleAiAttack() {
       clearTimeout(aiTimeout)
       if (battleOver.value || introActive.value) return
+
       const delay = Math.random() * 1900 + 1500
+
       aiTimeout = setTimeout(async () => {
         if (battleOver.value || introActive.value) return
+
         if (Math.random() > 0.78) {
           await jump('enemy')
         } else {
           const enemyAtk = Math.random() > 0.72
-            ? { id: 2, name: enemyChar.value?.skill || 'Especial', damage: 15, type: 'special', delay: 680, range: 32, special: true }
-            : { id: 1, name: 'Zarpazo', damage: Math.floor(Math.random() * 8) + 6, type: 'fast', delay: 360, range: 18 }
+            ? {
+                id: 2,
+                name: enemyChar.value?.skill || 'Especial',
+                damage: 15,
+                type: 'special',
+                delay: 680,
+                range: 32,
+                special: true,
+              }
+            : {
+                id: 1,
+                name: 'Zarpazo',
+                damage: Math.floor(Math.random() * 8) + 6,
+                type: 'fast',
+                delay: 360,
+                range: 18,
+              }
+
           await performAttack('enemy', enemyAtk)
         }
+
         scheduleAiAttack()
       }, delay)
     }
 
     function startFight() {
       introActive.value = false
-      ready.value       = true
-      canAttack.value   = true
+      ready.value = true
+      canAttack.value = true
       showMessage('¡PELEA!', 'fight')
       startTimer()
       scheduleAiAttack()
@@ -611,10 +798,17 @@ export default {
 
     function runIntro() {
       introActive.value = true
-      introPhase.value  = 1
-      canAttack.value   = false
-      setTimeout(() => { introPhase.value = 2 }, 1200)
-      setTimeout(() => { introPhase.value = 3 }, 2500)
+      introPhase.value = 1
+      canAttack.value = false
+
+      setTimeout(() => {
+        introPhase.value = 2
+      }, 1200)
+
+      setTimeout(() => {
+        introPhase.value = 3
+      }, 2500)
+
       setTimeout(startFight, 3900)
     }
 
@@ -622,30 +816,31 @@ export default {
       clearInterval(timerInterval)
       clearTimeout(aiTimeout)
       battleOver.value = true
-      winner.value     = win
-      canAttack.value  = false
+      winner.value = win
+      canAttack.value = false
+
       if (win === 'enemy') playerState.value = 'ko'
       if (win === 'player') enemyState.value = 'ko'
     }
 
     function restartBattle() {
-      playerHp.value    = 100
-      enemyHp.value     = 100
+      playerHp.value = 100
+      enemyHp.value = 100
       playerDmgBar.value = 100
-      enemyDmgBar.value  = 100
-      timeLeft.value    = 60
+      enemyDmgBar.value = 100
+      timeLeft.value = 60
       round.value++
-      playerX.value     = 22
-      enemyX.value      = 76
-      battleOver.value  = false
-      winner.value      = null
-      canAttack.value   = true
+      playerX.value = 22
+      enemyX.value = 76
+      battleOver.value = false
+      winner.value = null
+      canAttack.value = true
       playerState.value = 'idle'
-      enemyState.value  = 'idle'
+      enemyState.value = 'idle'
       playerVulnerable.value = false
-      enemyVulnerable.value  = false
-      specialEffect.value    = ''
-      coyolUsed.value   = false
+      enemyVulnerable.value = false
+      specialEffect.value = ''
+      coyolUsed.value = false
       showMoveMenu.value = false
       damageNumbers.value = []
       showMessage('¡PELEA!', 'fight')
@@ -655,15 +850,21 @@ export default {
 
     function handleKeydown(event) {
       if (battleOver.value || introActive.value) return
-      if (event.code === 'Space' || event.code === 'KeyW') { event.preventDefault(); jump('player') }
+
+      if (event.code === 'Space' || event.code === 'KeyW') {
+        event.preventDefault()
+        jump('player')
+      }
+
       if (event.code === 'KeyJ') playerAttack(attacks.value[0])
       if (event.code === 'KeyK') playerAttack(attacks.value[1])
       if (event.code === 'KeyL') playerAttack(attacks.value[2])
       if (event.code === 'KeyC') useCoyol()
     }
 
-    // Loop principal del juego (60 fps) — para tickear watchers manuales
+    // Loop principal del juego.
     let rafId = null
+
     function gameLoop() {
       tickStates()
       rafId = requestAnimationFrame(gameLoop)
@@ -680,8 +881,8 @@ export default {
 
     onUnmounted(() => {
       clearInterval(timerInterval)
-      clearInterval(playerFrameTimer)
-      clearInterval(enemyFrameTimer)
+      clearTimeout(playerFrameTimer)
+      clearTimeout(enemyFrameTimer)
       clearTimeout(aiTimeout)
       clearTimeout(msgTimer)
       clearTimeout(enemyVulnerableTimer)
@@ -691,24 +892,51 @@ export default {
 
     return {
       emit,
-      playerChar, enemyChar,
-      parallaxStyle, layerStyle, lightsStyle,
-      playerX, enemyX,
-      playerHp, enemyHp, playerDmgBar, enemyDmgBar,
-      timeLeft, round,
-      ready, canAttack, battleOver, winner,
-      flashActive, zoomHit, cameraClass,
-      battleMessage, messageType,
+      playerChar,
+      enemyChar,
+      parallaxStyle,
+      layerStyle,
+      lightsStyle,
+      playerX,
+      enemyX,
+      playerHp,
+      enemyHp,
+      playerDmgBar,
+      enemyDmgBar,
+      timeLeft,
+      round,
+      ready,
+      canAttack,
+      battleOver,
+      winner,
+      flashActive,
+      zoomHit,
+      cameraClass,
+      battleMessage,
+      messageType,
       damageNumbers,
-      specialEffect, specialDirection, specialEffectStyle,
-      coyolUsed, showMoveMenu,
-      introActive, introPhase,
-      playerState, enemyState,
-      playerFlash, enemyFlash,
-      playerVulnerable, enemyVulnerable,
+      specialEffect,
+      specialDirection,
+      specialEffectStyle,
+      coyolUsed,
+      showMoveMenu,
+      introActive,
+      introPhase,
+      playerState,
+      enemyState,
+      playerFlash,
+      enemyFlash,
+      playerVulnerable,
+      enemyVulnerable,
       attacks,
-      currentSprite, onSpriteError,
-      playerAttack, restartBattle, jump, useCoyol, hpClass,
+      currentSprite,
+      onSpriteError,
+      playerAttack,
+      restartBattle,
+      jump,
+      useCoyol,
+      getJumpDuration,
+      hpClass,
     }
   },
 }
@@ -727,25 +955,27 @@ export default {
   transform-origin: center bottom;
 }
 
-.battle-screen.shaking       { animation: screenShake 0.18s ease both; }
+.battle-screen.shaking { animation: screenShake 0.18s ease both; }
 .battle-screen.shaking.strong { animation: screenShakeStrong 0.32s ease both; }
-.battle-screen.zoom-hit      { animation: impactZoom 0.28s ease both; }
+.battle-screen.zoom-hit { animation: impactZoom 0.28s ease both; }
 
 @keyframes screenShake {
-  0%,100% { transform: translate(0,0); }
-  25% { transform: translate(3px,-1px); }
-  50% { transform: translate(-3px,1px); }
-  75% { transform: translate(2px,1px); }
+  0%, 100% { transform: translate(0, 0); }
+  25% { transform: translate(3px, -1px); }
+  50% { transform: translate(-3px, 1px); }
+  75% { transform: translate(2px, 1px); }
 }
+
 @keyframes screenShakeStrong {
-  0%,100% { transform: translate(0,0) scale(1); }
-  20%  { transform: translate(7px,-3px) scale(1.01); }
-  45%  { transform: translate(-8px,2px) scale(1.012); }
-  70%  { transform: translate(5px,3px) scale(1.006); }
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  20% { transform: translate(7px, -3px) scale(1.01); }
+  45% { transform: translate(-8px, 2px) scale(1.012); }
+  70% { transform: translate(5px, 3px) scale(1.006); }
 }
+
 @keyframes impactZoom {
-  0%,100% { filter: none; }
-  35%     { filter: contrast(1.12) brightness(1.12); }
+  0%, 100% { filter: none; }
+  35% { filter: contrast(1.12) brightness(1.12); }
 }
 
 /* ── PARALLAX ─────────────────────────────────────────────── */
@@ -756,12 +986,11 @@ export default {
   overflow: hidden;
 }
 
-/* Cada capa usa la MISMA imagen pero con blur y opacidad distintos */
 .stage-bg,
 .stage-mid,
 .stage-fg {
   position: absolute;
-  inset: -8%;           /* margen extra para que el translate no muestre bordes */
+  inset: -8%;
   background-image: var(--stage-image);
   background-size: cover;
   background-position: center;
@@ -769,26 +998,21 @@ export default {
   transition: transform 0.28s cubic-bezier(0.25, 0.46, 0.45, 0.94);
 }
 
-/* Capa lejana — muy desaturada, oscura */
 .stage-bg {
   filter: blur(3px) saturate(0.6) brightness(0.45) contrast(1.1);
 }
 
-/* Capa media — algo más nítida, siluetas */
 .stage-mid {
   filter: blur(1.2px) saturate(0.8) brightness(0.62) contrast(1.15);
   mix-blend-mode: normal;
 }
 
-/* Capa cercana — más nítida, colorida; se aplica solo al tercio inferior */
 .stage-fg {
   filter: saturate(1.05) brightness(0.75) contrast(1.18);
-  /* Máscara para que solo se vea en la parte baja (suelo) */
   -webkit-mask-image: linear-gradient(to top, black 0%, black 35%, transparent 65%);
-  mask-image:         linear-gradient(to top, black 0%, black 35%, transparent 65%);
+  mask-image: linear-gradient(to top, black 0%, black 35%, transparent 65%);
 }
 
-/* ── CAPAS ATMOSFÉRICAS (no se mueven con parallax) ───────── */
 .stage-layer {
   position: absolute;
   inset: 0;
@@ -801,12 +1025,14 @@ export default {
   opacity: 0.18;
   filter: blur(24px);
 }
+
 .mist-back {
   background:
     radial-gradient(circle at 25% 60%, rgba(255,255,255,0.18), transparent 30%),
     radial-gradient(circle at 72% 34%, rgba(0,212,255,0.14), transparent 28%);
   animation: mistDrift 12s ease-in-out infinite alternate;
 }
+
 .mist-front {
   z-index: 7;
   opacity: 0.12;
@@ -815,14 +1041,22 @@ export default {
     radial-gradient(circle at 80% 82%, rgba(192,57,43,0.12), transparent 30%);
   animation: mistDriftFront 9s ease-in-out infinite alternate;
 }
-@keyframes mistDrift     { from { transform: translateX(-3%); } to { transform: translateX(4%); } }
-@keyframes mistDriftFront { from { transform: translateX(4%) translateY(1%); } to { transform: translateX(-3%) translateY(-1%); } }
+
+@keyframes mistDrift {
+  from { transform: translateX(-3%); }
+  to { transform: translateX(4%); }
+}
+
+@keyframes mistDriftFront {
+  from { transform: translateX(4%) translateY(1%); }
+  to { transform: translateX(-3%) translateY(-1%); }
+}
 
 .stage-lights {
   z-index: 3;
   background:
     radial-gradient(circle at var(--player-x) 62%, rgba(200,168,75,0.14), transparent 20%),
-    radial-gradient(circle at var(--enemy-x)  58%, rgba(0,212,255,0.12),  transparent 20%);
+    radial-gradient(circle at var(--enemy-x) 58%, rgba(0,212,255,0.12), transparent 20%);
 }
 
 .stage-floor-glow {
@@ -857,6 +1091,7 @@ export default {
   pointer-events: none;
   transition: background 0.05s;
 }
+
 .screen-flash.active { background: rgba(255,255,255,0.15); }
 
 /* ── HUD ──────────────────────────────────────────────────── */
@@ -872,15 +1107,28 @@ export default {
   transform: translateY(-20px);
   transition: opacity 0.5s ease, transform 0.5s ease;
 }
-.battle-header.visible { opacity: 1; transform: translateY(0); }
+
+.battle-header.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
 .battle-header::after {
   content: '';
   position: absolute;
-  bottom: 0; left: 3%; right: 3%; height: 1px;
+  bottom: 0;
+  left: 3%;
+  right: 3%;
+  height: 1px;
   background: linear-gradient(90deg, transparent, var(--blood), var(--gold), var(--blood), transparent);
 }
 
-.fighter-side { display: flex; flex-direction: column; gap: 0.4rem; }
+.fighter-side {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
 .fighter-side.right { align-items: flex-end; }
 
 .fighter-name {
@@ -891,8 +1139,14 @@ export default {
   color: var(--gold);
 }
 
-.hp-bar-wrap { display: flex; align-items: center; gap: 0.5rem; }
+.hp-bar-wrap {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
 .hp-bar-wrap.reversed { flex-direction: row-reverse; }
+
 .hp-label {
   font-family: var(--font-display);
   font-size: 0.65rem;
@@ -913,7 +1167,9 @@ export default {
 .hp-fill,
 .hp-damage-fill {
   position: absolute;
-  top: 2px; bottom: 2px; left: 2px;
+  top: 2px;
+  bottom: 2px;
+  left: 2px;
   transition: width 0.4s ease;
 }
 
@@ -923,16 +1179,29 @@ export default {
 }
 
 .hp-fill.player-hp,
-.hp-fill.enemy-hp { background: linear-gradient(90deg, #8b0000, #c0392b, #e74c3c); }
-.hp-bar.hp-mid .hp-fill { background: linear-gradient(90deg, #7a4800, #c07800, #e09000); }
-.hp-bar.hp-low .hp-fill { background: linear-gradient(90deg, #3a0000, #8b0000); animation: lowHpPulse 0.4s ease-in-out infinite; }
+.hp-fill.enemy-hp {
+  background: linear-gradient(90deg, #8b0000, #c0392b, #e74c3c);
+}
+
+.hp-bar.hp-mid .hp-fill {
+  background: linear-gradient(90deg, #7a4800, #c07800, #e09000);
+}
+
+.hp-bar.hp-low .hp-fill {
+  background: linear-gradient(90deg, #3a0000, #8b0000);
+  animation: lowHpPulse 0.4s ease-in-out infinite;
+}
 
 @keyframes lowHpPulse {
   0%,100% { filter: brightness(1); }
-  50%     { filter: brightness(1.4); }
+  50% { filter: brightness(1.4); }
 }
 
-.timer-block { text-align: center; min-width: 170px; }
+.timer-block {
+  text-align: center;
+  min-width: 170px;
+}
+
 .stage-name {
   font-family: var(--font-display);
   font-size: 0.58rem;
@@ -941,6 +1210,7 @@ export default {
   text-transform: uppercase;
   margin-bottom: 0.2rem;
 }
+
 .vs-badge {
   font-family: var(--font-title);
   font-size: 1.4rem;
@@ -948,10 +1218,12 @@ export default {
   text-shadow: 0 0 15px rgba(240,208,96,0.8), 2px 2px 0 rgba(139,0,0,1);
   animation: vsPulse 2s ease-in-out infinite;
 }
+
 @keyframes vsPulse {
   0%,100% { filter: brightness(1); }
-  50%     { filter: brightness(1.3); }
+  50% { filter: brightness(1.3); }
 }
+
 .battle-timer {
   font-family: var(--font-title);
   font-size: 2.2rem;
@@ -959,11 +1231,17 @@ export default {
   text-shadow: 0 0 20px rgba(240,208,96,0.6);
   line-height: 1;
 }
-.battle-timer.warning { color: var(--blood-light); animation: timerWarn 0.3s ease-in-out infinite; }
+
+.battle-timer.warning {
+  color: var(--blood-light);
+  animation: timerWarn 0.3s ease-in-out infinite;
+}
+
 @keyframes timerWarn {
   0%,100% { transform: scale(1); }
-  50%     { transform: scale(1.1); }
+  50% { transform: scale(1.1); }
 }
+
 .round-label {
   font-family: var(--font-display);
   font-size: 0.6rem;
@@ -980,12 +1258,14 @@ export default {
   opacity: 0;
   transition: opacity 0.6s ease;
 }
+
 .arena.visible { opacity: 1; }
 
 .arena-floor {
   position: absolute;
   bottom: 7%;
-  left: 0; right: 0;
+  left: 0;
+  right: 0;
   height: 5px;
   background: linear-gradient(90deg, transparent, var(--blood), var(--gold-dim), var(--blood), transparent);
   filter: blur(1px);
@@ -1005,113 +1285,124 @@ export default {
   will-change: left;
 }
 
-/* La imagen: sin animación CSS — el cambio de frame se hace por JS */
 .sprite-img {
   height: clamp(250px, 48vh, 520px);
   max-width: min(40vw, 520px);
   object-fit: contain;
-  image-rendering: -webkit-optimize-contrast; /* nitidez en Webkit */
-  image-rendering: crisp-edges;               /* pixel art — comentar si los sprites son suaves */
   filter: drop-shadow(0 0 18px rgba(0,0,0,0.92));
   transform-origin: center bottom;
-  /* SIN animation: aquí el movimiento es solo el cambio de img src */
 }
 
-/* Flip del enemigo */
 .sprite-img.flipped { transform: scaleX(-1); }
 
-/* Flash al recibir daño */
 .sprite-img.flash-hit {
   filter: drop-shadow(0 0 0 white) brightness(4);
   transition: filter 0.06s;
 }
 
-/* Idle: leve respiración (solo transform, sin afectar src) */
 .fighter-sprite .sprite-img:not(.attack):not(.special):not(.hit):not(.jump):not(.ko) {
   animation: idleBreath 2.6s ease-in-out infinite;
 }
+
 @keyframes idleBreath {
   0%,100% { translate: 0 0; }
-  50%     { translate: 0 -6px; }
+  50% { translate: 0 -6px; }
 }
 
-/* Walk: bob lateral */
 .sprite-img.walk {
   animation: walkBob 0.32s ease-in-out infinite !important;
 }
+
 @keyframes walkBob {
   0%,100% { rotate: -0.8deg; translate: 0 0; }
-  50%     { rotate:  0.8deg; translate: 0 -8px; }
+  50% { rotate: 0.8deg; translate: 0 -8px; }
 }
 
-/* Attack: lunge hacia adelante (jugador) */
 .fighter-sprite.player .sprite-img.attack,
 .fighter-sprite.player .sprite-img.special {
   animation: attackLungeRight 0.36s ease-out !important;
 }
+
 @keyframes attackLungeRight {
   0%,100% { transform: translateX(0); }
-  40%     { transform: translateX(44px) scale(1.06); }
+  40% { transform: translateX(44px) scale(1.06); }
 }
 
-/* Attack: lunge enemigo (ya tiene scaleX(-1)) */
 .fighter-sprite.enemy .sprite-img.attack,
 .fighter-sprite.enemy .sprite-img.special {
   animation: attackLungeLeft 0.36s ease-out !important;
 }
+
 @keyframes attackLungeLeft {
   0%,100% { transform: scaleX(-1) translateX(0); }
-  40%     { transform: scaleX(-1) translateX(44px) scale(1.06); }
+  40% { transform: scaleX(-1) translateX(44px) scale(1.06); }
 }
 
-/* Hit: sacudida */
 .sprite-img.hit {
   animation: hitShake 0.3s ease !important;
 }
+
 @keyframes hitShake {
   0%,100% { translate: 0 0; }
-  20%  { translate: -12px 0; }
-  40%  { translate:  10px 0; }
-  60%  { translate:  -7px 0; }
-  80%  { translate:   5px 0; }
+  20% { translate: -12px 0; }
+  40% { translate: 10px 0; }
+  60% { translate: -7px 0; }
+  80% { translate: 5px 0; }
 }
 
-/* Jump */
 .sprite-img.jump {
-  animation: jumpMove 0.68s ease-in-out !important;
+  animation: jumpMove 1.2s ease-in-out !important;
 }
+
 .fighter-sprite.enemy .sprite-img.jump {
-  animation: jumpMoveFlipped 0.68s ease-in-out !important;
+  animation: jumpMoveFlipped 1.2s ease-in-out !important;
 }
+
 @keyframes jumpMove {
   0%,100% { transform: translateY(0); }
-  45%     { transform: translateY(-120px); }
-}
-@keyframes jumpMoveFlipped {
-  0%,100% { transform: scaleX(-1) translateY(0); }
-  45%     { transform: scaleX(-1) translateY(-120px); }
+  35% { transform: translateY(-120px); }
+  68% { transform: translateY(-125px); }
 }
 
-/* KO */
+@keyframes jumpMoveFlipped {
+  0%,100% { transform: scaleX(-1) translateY(0); }
+  35% { transform: scaleX(-1) translateY(-120px); }
+  68% { transform: scaleX(-1) translateY(-125px); }
+}
+
 .fighter-sprite.player .sprite-img.ko {
   animation: koFall 0.65s ease-out forwards !important;
 }
+
 .fighter-sprite.enemy .sprite-img.ko {
   animation: koFallEnemy 0.65s ease-out forwards !important;
 }
-@keyframes koFall      { to { transform: rotate(-82deg) translateY(35px); opacity: 0.38; } }
-@keyframes koFallEnemy { to { transform: scaleX(-1) rotate(82deg) translateY(35px); opacity: 0.38; } }
 
-/* Auras por personaje */
-.fighter-sprite.segua   .sprite-img { filter: drop-shadow(0 0 20px rgba(160,216,239,0.42)) drop-shadow(0 0 8px rgba(0,0,0,0.9)); }
-.fighter-sprite.cadejos .sprite-img { filter: drop-shadow(0 0 20px rgba(192,57,43,0.42))  drop-shadow(0 0 8px rgba(0,0,0,0.9)); }
-.fighter-sprite.padre   .sprite-img { filter: drop-shadow(0 0 20px rgba(0,212,255,0.42))  drop-shadow(0 0 8px rgba(0,0,0,0.9)); }
+@keyframes koFall {
+  to { transform: rotate(-82deg) translateY(35px); opacity: 0.38; }
+}
 
-/* Estado vulnerable */
+@keyframes koFallEnemy {
+  to { transform: scaleX(-1) rotate(82deg) translateY(35px); opacity: 0.38; }
+}
+
+.fighter-sprite.segua .sprite-img {
+  filter: drop-shadow(0 0 20px rgba(160,216,239,0.42)) drop-shadow(0 0 8px rgba(0,0,0,0.9));
+}
+
+.fighter-sprite.cadejos .sprite-img {
+  filter: drop-shadow(0 0 20px rgba(192,57,43,0.42)) drop-shadow(0 0 8px rgba(0,0,0,0.9));
+}
+
+.fighter-sprite.padre .sprite-img {
+  filter: drop-shadow(0 0 20px rgba(0,212,255,0.42)) drop-shadow(0 0 8px rgba(0,0,0,0.9));
+}
+
 .fighter-sprite.vulnerable::before {
   content: 'Vulnerable';
   position: absolute;
-  top: 8%; left: 50%;
+  top: 8%;
+  left: 50%;
   transform: translateX(-50%);
   font-family: var(--font-display);
   font-size: 0.72rem;
@@ -1121,7 +1412,6 @@ export default {
   z-index: 3;
 }
 
-/* Sombra bajo el personaje */
 .fighter-shadow {
   width: 82%;
   height: 18px;
@@ -1130,9 +1420,10 @@ export default {
   background: radial-gradient(ellipse, rgba(0,0,0,0.82), transparent 72%);
   animation: shadowBreath 2.6s ease-in-out infinite;
 }
+
 @keyframes shadowBreath {
-  0%,100% { transform: scaleX(1);    opacity: 0.82; }
-  50%     { transform: scaleX(0.86); opacity: 0.54; }
+  0%,100% { transform: scaleX(1); opacity: 0.82; }
+  50% { transform: scaleX(0.86); opacity: 0.54; }
 }
 
 /* ── EFECTOS ESPECIALES ───────────────────────────────────── */
@@ -1147,8 +1438,10 @@ export default {
 .special-effect.headThrow::before {
   content: '';
   position: absolute;
-  top: 35px; left: 0;
-  width: 64px; height: 64px;
+  top: 35px;
+  left: 0;
+  width: 64px;
+  height: 64px;
   border-radius: 50%;
   background:
     radial-gradient(circle at 52% 42%, rgba(255,255,255,0.95) 0 8%, transparent 9%),
@@ -1157,16 +1450,28 @@ export default {
   box-shadow: 0 0 30px rgba(0,212,255,0.95);
   animation: headThrowFx 0.72s ease-in forwards;
 }
-.special-effect.from-enemy.headThrow::before { animation-name: headThrowFxReverse; }
-@keyframes headThrowFx        { from { opacity:1; transform:translateX(0) rotate(0deg) scale(0.8); } to { opacity:0; transform:translateX(calc(100% - 70px)) rotate(760deg) scale(1.12); } }
-@keyframes headThrowFxReverse { from { opacity:1; transform:translateX(calc(100% - 70px)) rotate(0deg) scale(0.8); } to { opacity:0; transform:translateX(0) rotate(-760deg) scale(1.12); } }
+
+.special-effect.from-enemy.headThrow::before {
+  animation-name: headThrowFxReverse;
+}
+
+@keyframes headThrowFx {
+  from { opacity: 1; transform: translateX(0) rotate(0deg) scale(0.8); }
+  to { opacity: 0; transform: translateX(calc(100% - 70px)) rotate(760deg) scale(1.12); }
+}
+
+@keyframes headThrowFxReverse {
+  from { opacity: 1; transform: translateX(calc(100% - 70px)) rotate(0deg) scale(0.8); }
+  to { opacity: 0; transform: translateX(0) rotate(-760deg) scale(1.12); }
+}
 
 .special-effect.acidSpit {
   height: 120px;
-  background: linear-gradient(90deg, rgba(155,255,92,0.0), rgba(155,255,92,0.42), rgba(0,255,190,0.0));
+  background: linear-gradient(90deg, rgba(155,255,92,0), rgba(155,255,92,0.42), rgba(0,255,190,0));
   filter: blur(2px) drop-shadow(0 0 20px rgba(120,255,90,0.8));
   animation: acidTrail 0.72s ease-out forwards;
 }
+
 .special-effect.acidSpit::before {
   content: '';
   position: absolute;
@@ -1176,18 +1481,37 @@ export default {
     linear-gradient(90deg, rgba(140,255,90,0.9), rgba(0,255,190,0.12));
   clip-path: polygon(0 32%, 78% 8%, 100% 50%, 78% 88%, 0 68%);
 }
-.acid-drop { position:absolute; width:12px; height:12px; border-radius:50%; background:#b7ff6a; box-shadow:0 0 16px rgba(183,255,106,0.95); animation:acidDrop 0.62s ease-out forwards; }
-.acid-drop.d1 { left:30%; top:18px; }
-.acid-drop.d2 { left:58%; top:72px; animation-delay:0.08s; }
-.acid-drop.d3 { left:76%; top:28px; animation-delay:0.14s; }
-@keyframes acidTrail { from { opacity:0; transform:scaleX(0.18); transform-origin:left center; } 32% { opacity:1; } to { opacity:0; transform:scaleX(1); transform-origin:left center; } }
-@keyframes acidDrop  { to { opacity:0; transform:translateY(34px) scale(0.3); } }
+
+.acid-drop {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #b7ff6a;
+  box-shadow: 0 0 16px rgba(183,255,106,0.95);
+  animation: acidDrop 0.62s ease-out forwards;
+}
+
+.acid-drop.d1 { left: 30%; top: 18px; }
+.acid-drop.d2 { left: 58%; top: 72px; animation-delay: 0.08s; }
+.acid-drop.d3 { left: 76%; top: 28px; animation-delay: 0.14s; }
+
+@keyframes acidTrail {
+  from { opacity: 0; transform: scaleX(0.18); transform-origin: left center; }
+  32% { opacity: 1; }
+  to { opacity: 0; transform: scaleX(1); transform-origin: left center; }
+}
+
+@keyframes acidDrop {
+  to { opacity: 0; transform: translateY(34px) scale(0.3); }
+}
 
 .special-effect.chainStrike::before,
 .special-effect.chainStrike::after {
   content: '';
   position: absolute;
-  left: 0; right: 0;
+  left: 0;
+  right: 0;
   height: 18px;
   background:
     repeating-linear-gradient(90deg, transparent 0 10px, rgba(210,210,210,0.95) 10px 20px, transparent 20px 30px),
@@ -1195,9 +1519,15 @@ export default {
   box-shadow: 0 0 18px rgba(0,212,255,0.65);
   animation: chainStrikeFx 0.68s ease-out forwards;
 }
-.special-effect.chainStrike::before { top:38px; rotate:-8deg; }
-.special-effect.chainStrike::after  { top:78px; rotate:7deg; animation-delay:0.08s; }
-@keyframes chainStrikeFx { from { opacity:0; transform:scaleX(0.1) translateX(-20%); } 35% { opacity:1; } to { opacity:0; transform:scaleX(1.1) translateX(12%); } }
+
+.special-effect.chainStrike::before { top: 38px; rotate: -8deg; }
+.special-effect.chainStrike::after { top: 78px; rotate: 7deg; animation-delay: 0.08s; }
+
+@keyframes chainStrikeFx {
+  from { opacity: 0; transform: scaleX(0.1) translateX(-20%); }
+  35% { opacity: 1; }
+  to { opacity: 0; transform: scaleX(1.1) translateX(12%); }
+}
 
 .special-effect.deadlyBite::before {
   content: '';
@@ -1207,197 +1537,406 @@ export default {
   filter: blur(8px);
   animation: biteFx 0.5s ease-out forwards;
 }
-@keyframes biteFx { from { opacity:0; transform:scaleX(0.4); } 45% { opacity:1; } to { opacity:0; transform:scaleX(1.2); } }
+
+@keyframes biteFx {
+  from { opacity: 0; transform: scaleX(0.4); }
+  45% { opacity: 1; }
+  to { opacity: 0; transform: scaleX(1.2); }
+}
 
 /* ── NÚMEROS DE DAÑO ──────────────────────────────────────── */
-.damage-numbers { position:absolute; inset:0; pointer-events:none; z-index:28; }
-.damage-number  { position:absolute; font-family:var(--font-title); font-size:1.8rem; font-weight:900; pointer-events:none; }
-.damage-number.enemy-dmg  { color:var(--blood-light); text-shadow:0 0 15px rgba(192,57,43,0.9),2px 2px 0 #000; }
-.damage-number.player-dmg { color:#fff; text-shadow:0 0 15px rgba(255,255,255,0.6),2px 2px 0 #000; }
-.damage-number.heal        { color:var(--gold-bright); text-shadow:0 0 15px rgba(240,208,96,0.9),2px 2px 0 #000; }
-.damage-number.vulnerable  { color:#b7ff6a; font-size:1.2rem; text-shadow:0 0 16px rgba(120,255,90,0.9),2px 2px 0 #000; }
+.damage-numbers {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 28;
+}
 
-.dmg-pop-enter-active { animation:dmgFloat 0.9s ease-out forwards; }
-.dmg-pop-leave-active { display:none; }
+.damage-number {
+  position: absolute;
+  font-family: var(--font-title);
+  font-size: 1.8rem;
+  font-weight: 900;
+  pointer-events: none;
+}
+
+.damage-number.enemy-dmg {
+  color: var(--blood-light);
+  text-shadow: 0 0 15px rgba(192,57,43,0.9), 2px 2px 0 #000;
+}
+
+.damage-number.player-dmg {
+  color: #fff;
+  text-shadow: 0 0 15px rgba(255,255,255,0.6), 2px 2px 0 #000;
+}
+
+.damage-number.heal {
+  color: var(--gold-bright);
+  text-shadow: 0 0 15px rgba(240,208,96,0.9), 2px 2px 0 #000;
+}
+
+.damage-number.vulnerable {
+  color: #b7ff6a;
+  font-size: 1.2rem;
+  text-shadow: 0 0 16px rgba(120,255,90,0.9), 2px 2px 0 #000;
+}
+
+.dmg-pop-enter-active { animation: dmgFloat 0.9s ease-out forwards; }
+.dmg-pop-leave-active { display: none; }
+
 @keyframes dmgFloat {
-  0%   { opacity:1; transform:translateY(0) scale(0.5); }
-  30%  { opacity:1; transform:translateY(-30px) scale(1.2); }
-  100% { opacity:0; transform:translateY(-80px) scale(0.8); }
+  0% { opacity: 1; transform: translateY(0) scale(0.5); }
+  30% { opacity: 1; transform: translateY(-30px) scale(1.2); }
+  100% { opacity: 0; transform: translateY(-80px) scale(0.8); }
 }
 
 /* ── MENSAJE BATALLA ──────────────────────────────────────── */
 .battle-message {
-  position:absolute; top:18%; left:50%;
-  transform:translateX(-50%);
-  font-family:var(--font-title);
-  font-size:clamp(1.5rem,5vw,3rem);
-  letter-spacing:0.15em;
-  text-transform:uppercase;
-  pointer-events:none;
-  z-index:30;
-  text-align:center;
-  text-shadow:2px 2px 0 #000;
+  position: absolute;
+  top: 18%;
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: var(--font-title);
+  font-size: clamp(1.5rem, 5vw, 3rem);
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  pointer-events: none;
+  z-index: 30;
+  text-align: center;
+  text-shadow: 2px 2px 0 #000;
 }
-.battle-message.hit        { color:var(--blood-light); }
-.battle-message.heal       { color:var(--gold-bright); text-shadow:0 0 25px rgba(240,208,96,0.9),2px 2px 0 #000; }
-.battle-message.vulnerable { color:#b7ff6a; text-shadow:0 0 25px rgba(120,255,90,0.9),2px 2px 0 #000; }
-.battle-message.fight      { color:var(--gold-bright); font-size:clamp(2rem,7vw,4.5rem); text-shadow:0 0 30px rgba(240,208,96,0.8),3px 3px 0 rgba(139,0,0,1); }
 
-.battle-msg-enter-active { animation:msgPop 0.8s ease-out; }
-.battle-msg-leave-active { transition:opacity 0.2s; }
-.battle-msg-leave-to     { opacity:0; }
+.battle-message.hit { color: var(--blood-light); }
+.battle-message.heal { color: var(--gold-bright); text-shadow: 0 0 25px rgba(240,208,96,0.9), 2px 2px 0 #000; }
+.battle-message.vulnerable { color: #b7ff6a; text-shadow: 0 0 25px rgba(120,255,90,0.9), 2px 2px 0 #000; }
+.battle-message.fight { color: var(--gold-bright); font-size: clamp(2rem, 7vw, 4.5rem); text-shadow: 0 0 30px rgba(240,208,96,0.8), 3px 3px 0 rgba(139,0,0,1); }
+
+.battle-msg-enter-active { animation: msgPop 0.8s ease-out; }
+.battle-msg-leave-active { transition: opacity 0.2s; }
+.battle-msg-leave-to { opacity: 0; }
+
 @keyframes msgPop {
-  0%   { opacity:0; transform:translateX(-50%) scale(1.8); }
-  30%  { opacity:1; transform:translateX(-50%) scale(0.95); }
-  85%  { opacity:1; transform:translateX(-50%) scale(1); }
-  100% { opacity:0; transform:translateX(-50%) scale(1); }
+  0% { opacity: 0; transform: translateX(-50%) scale(1.8); }
+  30% { opacity: 1; transform: translateX(-50%) scale(0.95); }
+  85% { opacity: 1; transform: translateX(-50%) scale(1); }
+  100% { opacity: 0; transform: translateX(-50%) scale(1); }
 }
 
 /* ── CONTROLES ────────────────────────────────────────────── */
 .battle-controls.compact {
-  position:fixed; left:50%; bottom:1.2rem;
-  transform:translateX(-50%) translateY(20px);
-  z-index:45;
-  width:min(760px, calc(100% - 2rem));
-  opacity:0;
-  transition:opacity 0.5s ease, transform 0.5s ease;
+  position: fixed;
+  left: 50%;
+  bottom: 1.2rem;
+  transform: translateX(-50%) translateY(20px);
+  z-index: 45;
+  width: min(760px, calc(100% - 2rem));
+  opacity: 0;
+  transition: opacity 0.5s ease, transform 0.5s ease;
 }
-.battle-controls.compact.visible { opacity:1; transform:translateX(-50%) translateY(0); }
-.quick-controls { display:flex; justify-content:center; gap:0.7rem; flex-wrap:wrap; }
+
+.battle-controls.compact.visible {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+.quick-controls {
+  display: flex;
+  justify-content: center;
+  gap: 0.7rem;
+  flex-wrap: wrap;
+}
 
 .control-chip {
-  font-family:var(--font-display);
-  font-size:0.75rem; letter-spacing:0.14em; text-transform:uppercase;
-  color:var(--gold-bright);
-  background:rgba(5,5,8,0.82);
-  border:1px solid rgba(200,168,75,0.45);
-  padding:0.75rem 1.1rem;
-  cursor:pointer;
-  backdrop-filter:blur(8px);
-  clip-path:polygon(8px 0%,100% 0%,calc(100% - 8px) 100%,0% 100%);
-  transition:transform 0.2s, border-color 0.2s, background 0.2s;
+  font-family: var(--font-display);
+  font-size: 0.75rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--gold-bright);
+  background: rgba(5,5,8,0.82);
+  border: 1px solid rgba(200,168,75,0.45);
+  padding: 0.75rem 1.1rem;
+  cursor: pointer;
+  backdrop-filter: blur(8px);
+  clip-path: polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%);
+  transition: transform 0.2s, border-color 0.2s, background 0.2s;
 }
-.control-chip:hover:not(:disabled) { transform:translateY(-2px); border-color:var(--gold-bright); background:rgba(30,18,8,0.92); }
-.control-chip:disabled, .control-chip.disabled { opacity:0.4; cursor:not-allowed; }
-.coyol-chip { color:var(--gold); border-color:rgba(240,208,96,0.45); }
+
+.control-chip:hover:not(:disabled) {
+  transform: translateY(-2px);
+  border-color: var(--gold-bright);
+  background: rgba(30,18,8,0.92);
+}
+
+.control-chip:disabled,
+.control-chip.disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.coyol-chip {
+  color: var(--gold);
+  border-color: rgba(240,208,96,0.45);
+}
 
 .move-menu {
-  margin-top:0.8rem;
-  background:linear-gradient(180deg,rgba(10,10,16,0.96),rgba(5,5,8,0.94));
-  border:1px solid rgba(200,168,75,0.45);
-  box-shadow:0 0 30px rgba(0,0,0,0.75), inset 0 0 30px rgba(200,168,75,0.05);
-  backdrop-filter:blur(10px);
-  padding:1rem;
-  position:relative;
+  margin-top: 0.8rem;
+  background: linear-gradient(180deg, rgba(10,10,16,0.96), rgba(5,5,8,0.94));
+  border: 1px solid rgba(200,168,75,0.45);
+  box-shadow: 0 0 30px rgba(0,0,0,0.75), inset 0 0 30px rgba(200,168,75,0.05);
+  backdrop-filter: blur(10px);
+  padding: 1rem;
+  position: relative;
 }
-.move-menu::before,.move-menu::after {
-  content:''; position:absolute;
-  width:26px; height:26px;
-  border-color:var(--gold); border-style:solid; pointer-events:none;
+
+.move-menu::before,
+.move-menu::after {
+  content: '';
+  position: absolute;
+  width: 26px;
+  height: 26px;
+  border-color: var(--gold);
+  border-style: solid;
+  pointer-events: none;
 }
-.move-menu::before { top:-1px; left:-1px;   border-width:2px 0 0 2px; }
-.move-menu::after  { right:-1px; bottom:-1px; border-width:0 2px 2px 0; }
+
+.move-menu::before { top: -1px; left: -1px; border-width: 2px 0 0 2px; }
+.move-menu::after { right: -1px; bottom: -1px; border-width: 0 2px 2px 0; }
 
 .move-menu-header {
-  display:flex; justify-content:space-between; align-items:center;
-  font-family:var(--font-display); font-size:0.75rem;
-  letter-spacing:0.22em; text-transform:uppercase;
-  color:var(--gold);
-  padding-bottom:0.8rem; margin-bottom:0.8rem;
-  border-bottom:1px solid rgba(200,168,75,0.18);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-family: var(--font-display);
+  font-size: 0.75rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--gold);
+  padding-bottom: 0.8rem;
+  margin-bottom: 0.8rem;
+  border-bottom: 1px solid rgba(200,168,75,0.18);
 }
-.close-moves { background:transparent; border:none; color:var(--gold); font-size:1.4rem; cursor:pointer; line-height:1; }
 
-.move-list { display:grid; grid-template-columns:1fr; gap:0.55rem; }
-.move-row {
-  display:grid; grid-template-columns:54px 1fr auto;
-  align-items:center; gap:0.9rem;
-  width:100%; padding:0.75rem 0.9rem;
-  background:rgba(255,255,255,0.035);
-  border:1px solid rgba(255,255,255,0.08);
-  color:var(--text-primary);
-  cursor:pointer; text-align:left;
-  transition:background 0.2s, transform 0.2s, border-color 0.2s;
+.close-moves {
+  background: transparent;
+  border: none;
+  color: var(--gold);
+  font-size: 1.4rem;
+  cursor: pointer;
+  line-height: 1;
 }
-.move-row:hover:not(:disabled) { transform:translateX(4px); background:rgba(200,168,75,0.08); border-color:rgba(200,168,75,0.35); }
-.move-row.disabled,.move-row:disabled { opacity:0.45; cursor:not-allowed; }
+
+.move-list {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.55rem;
+}
+
+.move-row {
+  display: grid;
+  grid-template-columns: 54px 1fr auto;
+  align-items: center;
+  gap: 0.9rem;
+  width: 100%;
+  padding: 0.75rem 0.9rem;
+  background: rgba(255,255,255,0.035);
+  border: 1px solid rgba(255,255,255,0.08);
+  color: var(--text-primary);
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.2s, transform 0.2s, border-color 0.2s;
+}
+
+.move-row:hover:not(:disabled) {
+  transform: translateX(4px);
+  background: rgba(200,168,75,0.08);
+  border-color: rgba(200,168,75,0.35);
+}
+
+.move-row.disabled,
+.move-row:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
 
 .move-key {
-  display:grid; place-items:center;
-  width:42px; height:42px;
-  font-family:var(--font-title); font-size:1rem;
-  color:#050508; background:var(--gold-bright);
-  box-shadow:0 0 15px rgba(240,208,96,0.35);
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  font-family: var(--font-title);
+  font-size: 1rem;
+  color: #050508;
+  background: var(--gold-bright);
+  box-shadow: 0 0 15px rgba(240,208,96,0.35);
 }
-.move-info { display:flex; flex-direction:column; gap:0.15rem; min-width:0; }
-.move-info strong { font-family:var(--font-display); font-size:0.82rem; letter-spacing:0.12em; text-transform:uppercase; color:#fff; }
-.move-info small  { font-family:var(--font-display); font-size:0.68rem; letter-spacing:0.06em; color:var(--text-muted); }
-.move-damage { font-family:var(--font-title); font-size:0.9rem; color:var(--blood-light); white-space:nowrap; }
-.move-damage.evade { color:var(--cyan-soul); }
-.move-damage.heal  { color:var(--gold-bright); }
-.move-row.special .move-key { background:var(--cyan-soul); }
-.move-row.heavy   .move-key { background:var(--blood-light); color:#fff; }
-.move-row.coyol   .move-key { background:var(--gold); }
 
-.move-panel-enter-active { animation:movePanelIn 0.25s ease-out; }
-.move-panel-leave-active { transition:opacity 0.2s, transform 0.2s; }
-.move-panel-leave-to     { opacity:0; transform:translateY(12px) scale(0.98); }
-@keyframes movePanelIn { from { opacity:0; transform:translateY(14px) scale(0.98); } to { opacity:1; transform:none; } }
+.move-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.move-info strong {
+  font-family: var(--font-display);
+  font-size: 0.82rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #fff;
+}
+
+.move-info small {
+  font-family: var(--font-display);
+  font-size: 0.68rem;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+}
+
+.move-damage {
+  font-family: var(--font-title);
+  font-size: 0.9rem;
+  color: var(--blood-light);
+  white-space: nowrap;
+}
+
+.move-damage.evade { color: var(--cyan-soul); }
+.move-damage.heal { color: var(--gold-bright); }
+.move-row.special .move-key { background: var(--cyan-soul); }
+.move-row.heavy .move-key { background: var(--blood-light); color: #fff; }
+.move-row.coyol .move-key { background: var(--gold); }
+
+.move-panel-enter-active { animation: movePanelIn 0.25s ease-out; }
+.move-panel-leave-active { transition: opacity 0.2s, transform 0.2s; }
+.move-panel-leave-to { opacity: 0; transform: translateY(12px) scale(0.98); }
+
+@keyframes movePanelIn {
+  from { opacity: 0; transform: translateY(14px) scale(0.98); }
+  to { opacity: 1; transform: none; }
+}
 
 /* ── GAME OVER ────────────────────────────────────────────── */
 .game-over-screen {
-  position:fixed; inset:0; z-index:100;
-  display:flex; flex-direction:column;
-  align-items:center; justify-content:center;
-  text-align:center; padding:2rem;
-  background:rgba(0,0,0,0.75);
-  backdrop-filter:blur(6px);
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 2rem;
+  background: rgba(0,0,0,0.75);
+  backdrop-filter: blur(6px);
 }
-.go-bg-glow { position:absolute; inset:0; pointer-events:none; }
-.go-bg-glow.win  { background:radial-gradient(ellipse 70% 50% at 50% 50%, rgba(200,168,75,0.2), transparent 70%); }
-.go-bg-glow.lose { background:radial-gradient(ellipse 70% 50% at 50% 50%, rgba(139,0,0,0.3), transparent 70%); }
+
+.go-bg-glow {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.go-bg-glow.win {
+  background: radial-gradient(ellipse 70% 50% at 50% 50%, rgba(200,168,75,0.2), transparent 70%);
+}
+
+.go-bg-glow.lose {
+  background: radial-gradient(ellipse 70% 50% at 50% 50%, rgba(139,0,0,0.3), transparent 70%);
+}
 
 .finish-him {
-  font-family:var(--font-title);
-  font-size:clamp(2.5rem,8vw,6rem);
-  letter-spacing:0.12em;
-  animation:goAppear 0.5s cubic-bezier(0.175,0.885,0.32,1.275) both;
+  font-family: var(--font-title);
+  font-size: clamp(2.5rem, 8vw, 6rem);
+  letter-spacing: 0.12em;
+  animation: goAppear 0.5s cubic-bezier(0.175,0.885,0.32,1.275) both;
 }
-.finish-him.win  { color:var(--gold-bright); text-shadow:0 0 30px rgba(240,208,96,0.9),4px 4px 0 rgba(100,60,0,1); }
-.finish-him.lose { color:var(--blood-light); text-shadow:0 0 30px rgba(192,57,43,1),4px 4px 0 #000; }
-@keyframes goAppear { from { opacity:0; transform:scale(2); filter:blur(10px); } to { opacity:1; transform:scale(1); filter:blur(0); } }
+
+.finish-him.win {
+  color: var(--gold-bright);
+  text-shadow: 0 0 30px rgba(240,208,96,0.9), 4px 4px 0 rgba(100,60,0,1);
+}
+
+.finish-him.lose {
+  color: var(--blood-light);
+  text-shadow: 0 0 30px rgba(192,57,43,1), 4px 4px 0 #000;
+}
+
+@keyframes goAppear {
+  from { opacity: 0; transform: scale(2); filter: blur(10px); }
+  to { opacity: 1; transform: scale(1); filter: blur(0); }
+}
 
 .winner-text {
-  font-family:var(--font-display);
-  font-size:clamp(0.9rem,3vw,1.5rem);
-  letter-spacing:0.3em; text-transform:uppercase;
-  color:var(--gold); margin:0.8rem 0 2rem;
-  animation:goAppear 0.5s ease 0.2s both;
+  font-family: var(--font-display);
+  font-size: clamp(0.9rem, 3vw, 1.5rem);
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--gold);
+  margin: 0.8rem 0 2rem;
+  animation: goAppear 0.5s ease 0.2s both;
 }
-.go-buttons {
-  display:flex; flex-direction:column; gap:0.8rem;
-  width:100%; max-width:320px;
-  animation:goAppear 0.5s ease 0.4s both;
-}
-.go-buttons .btn { width:100%; padding:0.9rem; }
 
-.fade-enter-active { animation:fadeIn 0.4s ease; }
-.fade-leave-active { transition:opacity 0.3s; }
-.fade-leave-to     { opacity:0; }
-@keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
+.go-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+  width: 100%;
+  max-width: 320px;
+  animation: goAppear 0.5s ease 0.4s both;
+}
+
+.go-buttons .btn {
+  width: 100%;
+  padding: 0.9rem;
+}
+
+.fade-enter-active { animation: fadeIn 0.4s ease; }
+.fade-leave-active { transition: opacity 0.3s; }
+.fade-leave-to { opacity: 0; }
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
 
 /* ── RESPONSIVE ───────────────────────────────────────────── */
 @media (max-width: 768px) {
-  .battle-header { grid-template-columns:1fr; gap:0.6rem; padding:0.8rem 1rem; }
-  .fighter-side, .fighter-side.right { align-items:center; }
-  .hp-bar { width:160px; height:12px; }
-  .sprite-img { height:clamp(150px,30vh,280px); max-width:46vw; }
-  .arena { min-height:54vh; }
-  .battle-controls.compact { bottom:0.7rem; width:calc(100% - 1rem); }
-  .move-row { grid-template-columns:44px 1fr auto; gap:0.6rem; padding:0.65rem; }
-  .move-info strong { font-size:0.72rem; }
-  .move-info small  { font-size:0.6rem; }
-  .move-key { width:34px; height:34px; }
-  .battle-timer { font-size:1.8rem; }
+  .battle-header {
+    grid-template-columns: 1fr;
+    gap: 0.6rem;
+    padding: 0.8rem 1rem;
+  }
+
+  .fighter-side,
+  .fighter-side.right {
+    align-items: center;
+  }
+
+  .hp-bar {
+    width: 160px;
+    height: 12px;
+  }
+
+  .sprite-img {
+    height: clamp(150px, 30vh, 280px);
+    max-width: 46vw;
+  }
+
+  .arena { min-height: 54vh; }
+
+  .battle-controls.compact {
+    bottom: 0.7rem;
+    width: calc(100% - 1rem);
+  }
+
+  .move-row {
+    grid-template-columns: 44px 1fr auto;
+    gap: 0.6rem;
+    padding: 0.65rem;
+  }
+
+  .move-info strong { font-size: 0.72rem; }
+  .move-info small { font-size: 0.6rem; }
+  .move-key { width: 34px; height: 34px; }
+  .battle-timer { font-size: 1.8rem; }
 }
 </style>
