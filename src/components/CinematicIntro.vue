@@ -1,21 +1,36 @@
 <template>
   <div class="cinematic-intro" :class="{ 'video-mode': phase === 0 }">
     <!-- REPRODUCTOR DE VIDEO SEQUENCIAL -->
-    <div v-if="phase === 0 && currentVideoSrc" class="video-container">
-      <div class="video-header">
+    <div v-if="phase === 0 && (playerVideo || enemyVideo)" class="video-container">
+      <div class="video-header" :key="currentStep">
         <span class="video-subtitle">Presentando a...</span>
         <h2 class="video-title">{{ currentVideoTitle }}</h2>
       </div>
 
+      <!-- Video del Jugador (precargado y autoejecutado) -->
       <video
-        ref="videoPlayer"
-        :key="currentVideoSrc"
-        :src="currentVideoSrc"
+        v-show="currentStep === 'player-video'"
+        ref="playerVideoPlayer"
+        :src="playerVideo"
+        preload="auto"
         autoplay
         playsinline
         class="intro-video-element"
         @playing="clearWatchdog"
-        @ended="handleVideoEnded"
+        @ended="handlePlayerVideoEnded"
+        @error="handleVideoError"
+      ></video>
+
+      <!-- Video del Enemigo (precargado en paralelo) -->
+      <video
+        v-show="currentStep === 'enemy-video'"
+        ref="enemyVideoPlayer"
+        :src="enemyVideo"
+        preload="auto"
+        playsinline
+        class="intro-video-element"
+        @playing="clearWatchdog"
+        @ended="handleEnemyVideoEnded"
         @error="handleVideoError"
       ></video>
 
@@ -55,7 +70,7 @@
 </template>
 
 <script>
-import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
+import { ref, computed, onUnmounted, watch, nextTick } from 'vue'
 
 const seguaIntro = new URL('../assets/videos/segua_intro.mp4', import.meta.url).href
 const cadejosIntro = new URL('../assets/videos/cadejos_intro.mp4', import.meta.url).href
@@ -72,33 +87,18 @@ export default {
   props: {
     player: { type: Object, default: null },
     enemy: { type: Object, default: null },
-    phase: { type: Number, default: 0 }, // Empezamos en la fase 0 para reproducir los videos
+    phase: { type: Number, default: 0 },
     selectedStage: { type: Object, default: null }
   },
   emits: ['videos-done', 'skip'],
   setup(props, { emit }) {
-    const videoPlayer = ref(null)
+    const playerVideoPlayer = ref(null)
+    const enemyVideoPlayer = ref(null)
     const currentStep = ref('player-video')
-    const currentVideoSrc = ref('')
     const currentVideoTitle = ref('')
 
     const playerVideo = computed(() => videoMap[props.player?.type])
     const enemyVideo = computed(() => videoMap[props.enemy?.type])
-
-    function startVideoSequence() {
-      if (playerVideo.value) {
-        currentStep.value = 'player-video'
-        currentVideoSrc.value = playerVideo.value
-        currentVideoTitle.value = props.player?.name || 'Tu Leyenda'
-      } else if (enemyVideo.value) {
-        currentStep.value = 'enemy-video'
-        currentVideoSrc.value = enemyVideo.value
-        currentVideoTitle.value = props.enemy?.name || 'Rival'
-      } else {
-        // Si no hay videos para ninguno de los dos, ir directo a la intro normal
-        emit('videos-done')
-      }
-    }
 
     let watchdogTimer = null
     let transitioning = false
@@ -106,16 +106,68 @@ export default {
     function startWatchdog() {
       clearTimeout(watchdogTimer)
       watchdogTimer = setTimeout(() => {
-        console.warn("Watchdog: El video no inició a tiempo, forzando continuación...")
-        handleVideoEnded()
-      }, 2000)
+        console.warn("Watchdog: Tiempo límite de reproducción excedido, forzando salto...")
+        if (currentStep.value === 'player-video') {
+          handlePlayerVideoEnded()
+        } else {
+          handleEnemyVideoEnded()
+        }
+      }, 2500) // 2.5 segundos de gracia para iniciar o responder
     }
 
     function clearWatchdog() {
       clearTimeout(watchdogTimer)
     }
 
-    function handleVideoEnded() {
+    function startVideoSequence() {
+      if (playerVideo.value) {
+        currentStep.value = 'player-video'
+        currentVideoTitle.value = props.player?.name || 'Tu Leyenda'
+        nextTick(() => {
+          attemptPlayPlayer()
+        })
+      } else if (enemyVideo.value) {
+        currentStep.value = 'enemy-video'
+        currentVideoTitle.value = props.enemy?.name || 'Rival'
+        nextTick(() => {
+          attemptPlayEnemy()
+        })
+      } else {
+        emit('videos-done')
+      }
+    }
+
+    function attemptPlayPlayer() {
+      startWatchdog()
+      const player = playerVideoPlayer.value
+      if (player) {
+        player.play().catch(err => {
+          console.warn("Player autoplay bloqueado con sonido, intentando en mute...", err)
+          player.muted = true
+          player.play().catch(playErr => {
+            console.error("Error al reproducir el video del jugador:", playErr)
+            handlePlayerVideoEnded()
+          })
+        })
+      }
+    }
+
+    function attemptPlayEnemy() {
+      startWatchdog()
+      const enemy = enemyVideoPlayer.value
+      if (enemy) {
+        enemy.play().catch(err => {
+          console.warn("Enemy autoplay bloqueado con sonido, intentando en mute...", err)
+          enemy.muted = true
+          enemy.play().catch(playErr => {
+            console.error("Error al reproducir el video del enemigo:", playErr)
+            handleEnemyVideoEnded()
+          })
+        })
+      }
+    }
+
+    function handlePlayerVideoEnded() {
       if (transitioning) return
       transitioning = true
       clearWatchdog()
@@ -124,22 +176,36 @@ export default {
         transitioning = false
       }, 200)
 
-      if (currentStep.value === 'player-video') {
-        if (enemyVideo.value) {
-          currentStep.value = 'enemy-video'
-          currentVideoSrc.value = enemyVideo.value
-          currentVideoTitle.value = props.enemy?.name || 'Rival'
-        } else {
-          emit('videos-done')
-        }
-      } else if (currentStep.value === 'enemy-video') {
+      if (enemyVideo.value) {
+        currentStep.value = 'enemy-video'
+        currentVideoTitle.value = props.enemy?.name || 'Rival'
+        nextTick(() => {
+          attemptPlayEnemy()
+        })
+      } else {
         emit('videos-done')
       }
     }
 
+    function handleEnemyVideoEnded() {
+      if (transitioning) return
+      transitioning = true
+      clearWatchdog()
+
+      setTimeout(() => {
+        transitioning = false
+      }, 200)
+
+      emit('videos-done')
+    }
+
     function handleVideoError(e) {
-      console.error("Error al cargar o reproducir el video:", e)
-      handleVideoEnded()
+      console.error("Error de carga en elemento de video:", e)
+      if (currentStep.value === 'player-video') {
+        handlePlayerVideoEnded()
+      } else {
+        handleEnemyVideoEnded()
+      }
     }
 
     function skipVideos() {
@@ -153,24 +219,6 @@ export default {
       return sprite || character?.image || ''
     }
 
-    // Intentar reproducir el video de forma robusta
-    function attemptPlay() {
-      startWatchdog()
-      if (videoPlayer.value) {
-        videoPlayer.value.play().catch(err => {
-          console.warn("Autoplay bloqueado con sonido, intentando con mute...", err)
-          if (videoPlayer.value) {
-            videoPlayer.value.muted = true
-            videoPlayer.value.play().catch(playErr => {
-              console.error("No se pudo reproducir el video:", playErr)
-              // En caso de error fatal, saltamos al siguiente paso para que no se pegue el juego
-              handleVideoEnded()
-            })
-          }
-        })
-      }
-    }
-
     onUnmounted(() => {
       clearWatchdog()
     })
@@ -178,21 +226,18 @@ export default {
     watch(() => props.phase, (newPhase) => {
       if (newPhase === 0) {
         startVideoSequence()
-        setTimeout(attemptPlay, 150)
       }
     }, { immediate: true })
 
-    watch(currentVideoSrc, () => {
-      nextTick(() => {
-        attemptPlay()
-      })
-    })
-
     return {
-      videoPlayer,
-      currentVideoSrc,
+      playerVideoPlayer,
+      enemyVideoPlayer,
+      currentStep,
       currentVideoTitle,
-      handleVideoEnded,
+      playerVideo,
+      enemyVideo,
+      handlePlayerVideoEnded,
+      handleEnemyVideoEnded,
       handleVideoError,
       clearWatchdog,
       skipVideos,
@@ -219,7 +264,7 @@ export default {
     linear-gradient(120deg, rgba(4, 4, 8, 0.98), rgba(13, 5, 8, 0.96));
 }
 
-/* Modo Video */
+/* Modo Video Fullscreen */
 .cinematic-intro.video-mode {
   padding: 0;
   display: flex;
@@ -230,69 +275,91 @@ export default {
 
 .video-container {
   position: relative;
-  width: 100%;
-  height: 100%;
+  width: 100vw;
+  height: 100vh;
   display: flex;
-  flex-direction: column;
   justify-content: center;
   align-items: center;
   overflow: hidden;
 }
 
 .intro-video-element {
-  width: 100%;
-  height: 100%;
-  max-width: 100%;
-  max-height: 100%;
-  object-fit: contain;
+  width: 100vw;
+  height: 100vh;
+  object-fit: cover; /* Llena toda la pantalla */
   z-index: 1;
+  position: absolute;
+  top: 0;
+  left: 0;
 }
 
+/* Letrero del Nombre del Personaje */
 .video-header {
   position: absolute;
-  top: 2.5rem;
-  left: 3.5rem;
+  bottom: 4.5rem;
+  left: 4.5rem;
   z-index: 10;
   display: flex;
   flex-direction: column;
-  gap: 0.2rem;
+  gap: 0.15rem;
   pointer-events: none;
   font-family: var(--font-display);
+  background: linear-gradient(90deg, rgba(5, 5, 8, 0.85) 0%, rgba(5, 5, 8, 0.4) 75%, transparent 100%);
+  border-left: 4px solid var(--gold-bright);
+  padding: 1.2rem 3.5rem 1.2rem 1.8rem;
+  backdrop-filter: blur(4px);
+  box-shadow: -10px 0 30px rgba(0, 0, 0, 0.5);
+  animation: slideInName 0.72s cubic-bezier(0.19, 1, 0.22, 1) both;
+}
+
+@keyframes slideInName {
+  from {
+    transform: translateX(-50px);
+    opacity: 0;
+    filter: blur(5px);
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+    filter: blur(0);
+  }
 }
 
 .video-subtitle {
-  font-size: 0.75rem;
+  font-size: 0.72rem;
   text-transform: uppercase;
   color: var(--text-muted);
-  letter-spacing: 0.25rem;
+  letter-spacing: 0.24em;
 }
 
 .video-title {
-  font-size: clamp(2rem, 5vw, 3.5rem);
+  font-size: clamp(2.2rem, 5.5vw, 4rem);
   font-family: var(--font-title);
   color: var(--gold-bright);
-  text-shadow: 0 0 20px rgba(240, 208, 96, 0.65);
+  text-shadow: 0 0 25px rgba(240, 208, 96, 0.8);
   margin: 0;
   text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 
 .btn-skip-intro {
   position: absolute;
-  bottom: 2.5rem;
-  right: 3.5rem;
+  bottom: 4.5rem;
+  right: 4.5rem;
   z-index: 10;
   font-family: var(--font-display);
   font-size: 0.8rem;
   color: var(--gold-bright);
-  background: rgba(10, 10, 15, 0.75);
+  background: rgba(10, 10, 15, 0.8);
   border: 1px solid rgba(240, 208, 96, 0.45);
-  padding: 0.75rem 1.4rem;
+  padding: 0.85rem 1.6rem;
   cursor: pointer;
   letter-spacing: 0.16em;
   text-transform: uppercase;
   backdrop-filter: blur(8px);
   clip-path: polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%);
   transition: all 0.25s ease;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
 }
 
 .btn-skip-intro:hover {
