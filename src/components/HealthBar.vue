@@ -47,32 +47,35 @@ export default {
 
 <style scoped>
 .healthbar-root {
-  display: flex; flex-direction: column; gap: 0.3rem;
+  display: flex; flex-direction: column; gap: 0.4rem;
 }
 .healthbar-root.reversed { align-items: flex-end; }
 
 .hb-name {
   font-family: var(--font-display);
-  font-size: 0.8rem; font-weight: 700;
-  letter-spacing: 0.1em; color: var(--gold);
+  font-size: 1rem; font-weight: 700;
+  letter-spacing: 0.1em; color: var(--gold-bright);
+  text-shadow: 2px 2px 0px #000;
 }
 
 .hb-wrap {
-  display: flex; align-items: center; gap: 0.5rem;
+  display: flex; align-items: center; gap: 0.75rem;
 }
 .healthbar-root.reversed .hb-wrap { flex-direction: row-reverse; }
 
 .hb-pct {
   font-family: var(--font-display);
-  font-size: 0.6rem; letter-spacing: 0.1em;
-  color: var(--text-muted); min-width: 2.5rem;
+  font-size: 0.95rem; letter-spacing: 0.05em;
+  color: #fff; min-width: 3.5rem;
+  text-shadow: 1.5px 1.5px 0px #000;
 }
 
 .hb-track {
-  width: 220px; height: 16px;
+  width: 330px; height: 26px;
   background: #0a0a0f;
-  border: 1px solid rgba(200,168,75,0.3);
+  border: 2px solid var(--gold);
   position: relative; overflow: hidden;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.6);
 }
 
 /* Barra de daño retrasada (amarilla/naranja) */
@@ -115,6 +118,8 @@ export default {
 }
 
 @media (max-width: 768px) {
-  .hb-track { width: 140px; height: 12px; }
+  .hb-track { width: 180px; height: 18px; border-width: 1.5px; }
+  .hb-pct { font-size: 0.75rem; min-width: 2.5rem; }
+  .hb-name { font-size: 0.8rem; }
 }
 </style>

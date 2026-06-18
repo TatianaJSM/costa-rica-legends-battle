@@ -30,7 +30,7 @@
           </div>
         </div>
         <button class="btn btn-primary confirm-btn" @click="confirm">
-          <span>⚔ IR A LA BATALLA</span>
+          <span>IR A LA BATALLA</span>
           <span class="btn-arrow">›</span>
         </button>
       </div>

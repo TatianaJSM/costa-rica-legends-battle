@@ -1032,12 +1032,9 @@ export default {
       if (!coyolItem.value || !coyolItem.value.visible) return
 
       const playerThreshold = playerChar.value?.type === 'padre' ? 6.0 : 4.5
-      const enemyThreshold = enemyChar.value?.type === 'padre' ? 6.0 : 4.5
 
       if (Math.abs(playerX.value - coyolItem.value.x) < playerThreshold) {
         collectItem('player')
-      } else if (Math.abs(enemyX.value - coyolItem.value.x) < enemyThreshold) {
-        collectItem('enemy')
       }
     }
 

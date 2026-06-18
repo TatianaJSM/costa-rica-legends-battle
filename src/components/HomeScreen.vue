@@ -29,12 +29,10 @@
       <!-- Botones de menú -->
       <div class="menu-buttons" :class="{ visible: buttonsVisible }">
         <button class="btn btn-primary menu-btn" @click="emit('go-to', 'select')">
-          <span class="btn-icon">⚔</span>
           <span>Seleccionar Personaje</span>
           <span class="btn-arrow">›</span>
         </button>
         <button class="btn btn-secondary menu-btn" @click="showLore = true">
-          <span class="btn-icon">📜</span>
           <span>Las Leyendas</span>
           <span class="btn-arrow">›</span>
         </button>

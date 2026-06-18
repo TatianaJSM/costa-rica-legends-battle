@@ -23,13 +23,11 @@
       <!-- Botones -->
       <div class="menu-buttons" :class="{ visible: buttonsVisible }">
         <button class="btn btn-primary menu-btn" @mouseenter="playSound('hover')" @click="emit('go-to', 'select')">
-          <span class="btn-icon">⚔</span>
           <span>Seleccionar Personaje</span>
           <span class="btn-arrow">›</span>
         </button>
 
         <button class="btn btn-secondary menu-btn" @mouseenter="playSound('hover')" @click="showLore = true; playSound('click')">
-          <span class="btn-icon">📜</span>
           <span>Las Leyendas</span>
           <span class="btn-arrow">›</span>
         </button>

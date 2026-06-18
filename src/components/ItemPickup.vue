@@ -22,7 +22,7 @@ export default {
     item: {
       type: Object,
       default: () => ({
-        icon: '⚗️',
+        icon: '[+]',
         name: 'Poción de Vida',
         description: '+20% HP restaurado',
         rarity: 'comun',

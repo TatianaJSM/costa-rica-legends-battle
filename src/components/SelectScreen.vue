@@ -157,7 +157,7 @@
         </div>
 
         <button class="btn btn-primary confirm-btn" @mouseenter="playSound('hover')" @click="confirm">
-          ⚔ IR A LA BATALLA
+          IR A LA BATALLA
         </button>
       </div>
     </transition>

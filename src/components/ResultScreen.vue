@@ -42,13 +42,13 @@
       <!-- Botones -->
       <div class="result-buttons" :class="{ visible: btnsVisible }">
         <button class="btn btn-primary" @mouseenter="playSound('hover')" @click="emit('restart'); playSound('click')">
-          ⚔ REVANCHA
+          REVANCHA
         </button>
         <button class="btn btn-secondary" @mouseenter="playSound('hover')" @click="emit('go-to', 'select')">
-          ◈ CAMBIAR PERSONAJE
+          CAMBIAR PERSONAJE
         </button>
         <button class="btn btn-secondary" @mouseenter="playSound('hover')" @click="emit('go-to', 'home')">
-          ⌂ MENÚ PRINCIPAL
+          MENÚ PRINCIPAL
         </button>
       </div>
 
@@ -147,8 +147,8 @@ export default {
   display: flex; flex-direction: column;
   align-items: center; justify-content: center;
   text-align: center; padding: 2rem;
-  background: rgba(0,0,0,0.8);
-  backdrop-filter: blur(8px);
+  background: rgba(5, 5, 8, 0.95);
+  backdrop-filter: blur(16px);
 }
 
 .confetti-canvas {
