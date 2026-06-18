@@ -927,6 +927,11 @@ export default {
         spawnDamageNumber(finalDamage, playerX.value, 32, isBlocking ? 'block-dmg' : 'player-dmg')
         applyKnockback('player', isBlocking ? 1 : (strong ? 6 : 3))
 
+        // Spawn Coyol item on floor immediately if player is low on health (<= 40%)
+        if (playerHp.value > 0 && playerHp.value <= 40 && !coyolItem.value) {
+          spawnCoyolItem()
+        }
+
         setTimeout(() => {
           playerDmgBar.value = playerHp.value
         }, 400)
@@ -2041,7 +2046,7 @@ export default {
 /* ── VINO DE COYOL PICKUP ITEM ───────────────────────────── */
 .coyol-item {
   position: absolute;
-  bottom: 0;
+  bottom: 40px;
   translate: -50% 0;
   width: 80px;
   height: 80px;
