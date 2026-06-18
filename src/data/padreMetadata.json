@@ -1,0 +1,236 @@
+{
+  "idle/idle_01.png": {
+    "width": 67,
+    "height": 103,
+    "feetX": 33.1,
+    "offsetPct": -0.006442
+  },
+  "idle/idle_02.png": {
+    "width": 65,
+    "height": 103,
+    "feetX": 31.9,
+    "offsetPct": -0.008978
+  },
+  "idle/idle_03.png": {
+    "width": 61,
+    "height": 103,
+    "feetX": 32,
+    "offsetPct": 0.025383
+  },
+  "idle/idle_04.png": {
+    "width": 59,
+    "height": 102,
+    "feetX": 30.1,
+    "offsetPct": 0.010013
+  },
+  "walk/walk_01.png": {
+    "width": 74,
+    "height": 96,
+    "feetX": 35.6,
+    "offsetPct": -0.01929
+  },
+  "walk/walk_02.png": {
+    "width": 70,
+    "height": 95,
+    "feetX": 31.6,
+    "offsetPct": -0.048266
+  },
+  "walk/walk_03.png": {
+    "width": 71,
+    "height": 94,
+    "feetX": 32.4,
+    "offsetPct": -0.044304
+  },
+  "walk/walk_04.png": {
+    "width": 70,
+    "height": 94,
+    "feetX": 30.7,
+    "offsetPct": -0.061451
+  },
+  "walk/walk_05.png": {
+    "width": 67,
+    "height": 94,
+    "feetX": 30.9,
+    "offsetPct": -0.038199
+  },
+  "walk/walk_06.png": {
+    "width": 72,
+    "height": 91,
+    "feetX": 33.8,
+    "offsetPct": -0.030063
+  },
+  "jump/jump_01.png": {
+    "width": 75,
+    "height": 74,
+    "feetX": 35.3,
+    "offsetPct": -0.028787
+  },
+  "jump/jump_02.png": {
+    "width": 70,
+    "height": 105,
+    "feetX": 21.2,
+    "offsetPct": -0.196608
+  },
+  "jump/jump_03.png": {
+    "width": 69,
+    "height": 68,
+    "feetX": 32.4,
+    "offsetPct": -0.030612
+  },
+  "attack/attack_01.png": {
+    "width": 91,
+    "height": 84,
+    "feetX": 34.7,
+    "offsetPct": -0.118646
+  },
+  "attack/attack_02.png": {
+    "width": 87,
+    "height": 84,
+    "feetX": 34.4,
+    "offsetPct": -0.105099
+  },
+  "attack/attack_03.png": {
+    "width": 98,
+    "height": 84,
+    "feetX": 32.6,
+    "offsetPct": -0.167696
+  },
+  "heavy/heavy_01.png": {
+    "width": 96,
+    "height": 84,
+    "feetX": 37,
+    "offsetPct": -0.114063
+  },
+  "heavy/heavy_02.png": {
+    "width": 99,
+    "height": 84,
+    "feetX": 37.8,
+    "offsetPct": -0.118398
+  },
+  "heavy/heavy_03.png": {
+    "width": 91,
+    "height": 67,
+    "feetX": 66.3,
+    "offsetPct": 0.228443
+  },
+  "special/special_01.png": {
+    "width": 81,
+    "height": 92,
+    "feetX": 32.4,
+    "offsetPct": -0.099737
+  },
+  "special/special_02.png": {
+    "width": 83,
+    "height": 89,
+    "feetX": 38.5,
+    "offsetPct": -0.036571
+  },
+  "special/special_03.png": {
+    "width": 78,
+    "height": 90,
+    "feetX": 36.3,
+    "offsetPct": -0.035215
+  },
+  "special/special_04.png": {
+    "width": 71,
+    "height": 92,
+    "feetX": 33,
+    "offsetPct": -0.034645
+  },
+  "special/special_05.png": {
+    "width": 58,
+    "height": 93,
+    "feetX": 29.4,
+    "offsetPct": 0.006232
+  },
+  "hit/hit_01.png": {
+    "width": 67,
+    "height": 89,
+    "feetX": 34.9,
+    "offsetPct": 0.021559
+  },
+  "hit/hit_02.png": {
+    "width": 61,
+    "height": 90,
+    "feetX": 32,
+    "offsetPct": 0.025197
+  },
+  "hit/hit_03.png": {
+    "width": 68,
+    "height": 89,
+    "feetX": 36,
+    "offsetPct": 0.029665
+  },
+  "ko/ko_01.png": {
+    "width": 86,
+    "height": 72,
+    "feetX": 38.7,
+    "offsetPct": -0.049612
+  },
+  "ko/ko_02.png": {
+    "width": 77,
+    "height": 73,
+    "feetX": 32.9,
+    "offsetPct": -0.072428
+  },
+  "ko/ko_03.png": {
+    "width": 129,
+    "height": 53,
+    "feetX": 66.6,
+    "offsetPct": 0.016439
+  },
+  "victory/victory_01.png": {
+    "width": 71,
+    "height": 88,
+    "feetX": 29.7,
+    "offsetPct": -0.081189
+  },
+  "victory/victory_02.png": {
+    "width": 71,
+    "height": 88,
+    "feetX": 31.1,
+    "offsetPct": -0.062578
+  },
+  "projectile/projectile_01.png": {
+    "width": 64,
+    "height": 43,
+    "feetX": 32,
+    "offsetPct": 0
+  },
+  "projectile/projectile_02.png": {
+    "width": 72,
+    "height": 42,
+    "feetX": 36,
+    "offsetPct": 0
+  },
+  "projectile/projectile_03.png": {
+    "width": 36,
+    "height": 66,
+    "feetX": 18,
+    "offsetPct": 0
+  },
+  "projectile/projectile_04.png": {
+    "width": 41,
+    "height": 68,
+    "feetX": 20.5,
+    "offsetPct": 0
+  },
+  "projectile/projectile_05.png": {
+    "width": 50,
+    "height": 74,
+    "feetX": 25,
+    "offsetPct": 0
+  },
+  "projectile/projectile_06.png": {
+    "width": 64,
+    "height": 44,
+    "feetX": 32,
+    "offsetPct": 0
+  },
+  "projectile/projectile_07.png": {
+    "width": 85,
+    "height": 51,
+    "feetX": 42.5,
+    "offsetPct": 0
+  }
+}

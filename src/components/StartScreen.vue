@@ -22,13 +22,13 @@
 
       <!-- Botones -->
       <div class="menu-buttons" :class="{ visible: buttonsVisible }">
-        <button class="btn btn-primary menu-btn" @click="emit('go-to', 'select')">
+        <button class="btn btn-primary menu-btn" @mouseenter="playSound('hover')" @click="emit('go-to', 'select')">
           <span class="btn-icon">⚔</span>
           <span>Seleccionar Personaje</span>
           <span class="btn-arrow">›</span>
         </button>
 
-        <button class="btn btn-secondary menu-btn" @click="showLore = true">
+        <button class="btn btn-secondary menu-btn" @mouseenter="playSound('hover')" @click="showLore = true; playSound('click')">
           <span class="btn-icon">📜</span>
           <span>Las Leyendas</span>
           <span class="btn-arrow">›</span>
@@ -54,15 +54,19 @@
           <h2 class="modal-title">Las Leyendas de Costa Rica</h2>
           <div class="divider"></div>
 
-          <div v-for="char in characters" :key="char.id" class="lore-entry">
-            <h3 class="lore-name" :class="char.type">{{ char.name }}</h3>
-            <p class="lore-desc">{{ char.description }}</p>
+          <div v-for="char in characters" :key="char.id" class="lore-entry" :class="char.type">
+            <img :src="char.portrait || char.image" :alt="char.name" class="lore-portrait" />
+            <div class="lore-text">
+              <h3 class="lore-name" :class="char.type">{{ char.name }}</h3>
+              <p class="lore-desc">{{ char.description }}</p>
+            </div>
           </div>
 
           <button
             class="btn btn-secondary"
             style="margin-top: 1.5rem; width: 100%"
-            @click="showLore = false"
+            @mouseenter="playSound('hover')"
+            @click="showLore = false; playSound('click')"
           >
             Cerrar
           </button>
@@ -74,6 +78,7 @@
 
 <script>
 import { ref, onMounted, onUnmounted } from 'vue'
+import { playSound } from '../modules/soundManager'
 
 export default {
   name: 'StartScreen',
@@ -248,7 +253,8 @@ export default {
       buttonsVisible,
       showLore,
       lightningCanvas,
-      emit
+      emit,
+      playSound
     }
   }
 }
@@ -489,7 +495,7 @@ export default {
 
 /* Modal */
 .lore-modal {
-  max-width: 520px;
+  max-width: 640px;
 }
 .modal-title {
   font-family: var(--font-title);
@@ -499,13 +505,46 @@ export default {
   text-align: center;
 }
 .lore-entry {
-  margin: 1rem 0;
+  display: flex;
+  align-items: center;
+  gap: 1.2rem;
+  margin: 1.2rem 0;
+  padding: 0.65rem 0.85rem;
+  background: rgba(255, 255, 255, 0.015);
+  border: 1px solid rgba(255, 255, 255, 0.03);
+  transition: border-color 0.25s, box-shadow 0.25s;
+}
+.lore-portrait {
+  width: 80px;
+  height: 106px;
+  object-fit: contain;
+  object-position: center;
+  background: #08080f;
+  border: 1.5px solid rgba(255, 255, 255, 0.1);
+  flex-shrink: 0;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+}
+
+.lore-entry.segua .lore-portrait { border-color: rgba(160, 216, 239, 0.35); }
+.lore-entry.segua:hover { border-color: rgba(160, 216, 239, 0.25); box-shadow: 0 0 14px rgba(160, 216, 239, 0.08); }
+
+.lore-entry.cadejos .lore-portrait { border-color: rgba(192, 57, 43, 0.35); }
+.lore-entry.cadejos:hover { border-color: rgba(192, 57, 43, 0.25); box-shadow: 0 0 14px rgba(192, 57, 43, 0.08); }
+
+.lore-entry.padre .lore-portrait { border-color: rgba(0, 212, 255, 0.35); }
+.lore-entry.padre:hover { border-color: rgba(0, 212, 255, 0.25); box-shadow: 0 0 14px rgba(0, 212, 255, 0.08); }
+
+.lore-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  flex: 1;
 }
 .lore-name {
   font-family: var(--font-display);
   font-size: 1rem;
   font-weight: 700;
-  margin-bottom: 0.3rem;
+  margin-bottom: 0.2rem;
 }
 .lore-name.segua   { color: #a0d8ef; }
 .lore-name.cadejos { color: var(--blood-light); }
@@ -515,7 +554,20 @@ export default {
   font-family: var(--font-display);
   font-size: 0.82rem;
   color: var(--text-muted);
-  line-height: 1.7;
+  line-height: 1.6;
+}
+
+@media (max-width: 520px) {
+  .lore-entry {
+    flex-direction: column;
+    text-align: center;
+    gap: 0.8rem;
+    padding: 1rem;
+  }
+  .lore-portrait {
+    width: 90px;
+    height: 120px;
+  }
 }
 
 .divider {

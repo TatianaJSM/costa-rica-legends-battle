@@ -2,12 +2,9 @@
   <div
     ref="screenEl"
     class="battle-screen"
-    :class="[cameraClass, { 'zoom-hit': zoomHit }]"
   >
     <!-- ── FIXED BACKGROUND LAYER ─────────────────────────── -->
     <div class="stage-background" :style="stageBackgroundStyle"></div>
-
-    <div class="screen-flash" :class="{ active: flashActive, strong: zoomHit }"></div>
 
     <CinematicIntro
       v-if="introActive"
@@ -52,7 +49,20 @@
     </div>
 
     <!-- ── ARENA ─────────────────────────────────────────── -->
-    <div class="arena" :class="{ visible: ready && !introActive }">
+    <div class="arena" :class="[{ visible: ready && !introActive }, cameraClass, { 'zoom-hit': zoomHit }]">
+
+      <!-- VINO DE COYOL ITEM (z-index: 10, above background, below characters) -->
+      <div
+        v-if="coyolItem && coyolItem.visible"
+        class="coyol-item"
+        :style="{ left: coyolItem.x + '%' }"
+      >
+        <img class="coyol-item-img" src="/src/assets/images/items/vino-coyol.png" alt="Vino de Coyol" />
+        <span class="coyol-particle p1"></span>
+        <span class="coyol-particle p2"></span>
+        <span class="coyol-particle p3"></span>
+        <span class="coyol-particle p4"></span>
+      </div>
 
       <!-- JUGADOR -->
       <div
@@ -67,12 +77,11 @@
           :src="spriteUrl"
           :alt="playerChar.name"
           :class="['sprite-img', playerState, { 'flash-hit': playerFlash }]"
-          :style="playerState === 'jump' ? { animationDuration: getJumpDuration(playerChar) + 'ms' } : {}"
+          :style="getSpriteStyle(playerChar, playerState, idx)"
           loading="eager"
           decoding="async"
           @error="onSpriteError($event, playerChar)"
         />
-        <div class="fighter-shadow"></div>
       </div>
 
       <!-- EFECTO ESPECIAL -->
@@ -87,6 +96,24 @@
         <span v-if="specialEffect === 'acidSpit'" class="acid-drop d3"></span>
       </div>
 
+      <!-- ENTIDADES DE PROYECTILES ACTIVOS (CABEZAS FANTASMALES) -->
+      <div
+        v-for="proj in activeProjectiles"
+        :key="proj.id"
+        :class="['projectile-entity', getProjectileClass(proj)]"
+        :style="{
+          left: proj.x + '%',
+          transform: proj.direction < 0 ? 'scaleX(-1)' : 'none'
+        }"
+      >
+        <img
+          :src="getProjectileSrc(proj)"
+          alt="Proyectil"
+          class="projectile-img"
+        />
+      </div>
+
+
       <!-- ENEMIGO -->
       <div
         class="fighter-sprite enemy"
@@ -100,12 +127,11 @@
           :src="spriteUrl"
           :alt="enemyChar.name"
           :class="['sprite-img', 'flipped', enemyState, { 'flash-hit': enemyFlash }]"
-          :style="enemyState === 'jump' ? { animationDuration: getJumpDuration(enemyChar) + 'ms' } : {}"
+          :style="getSpriteStyle(enemyChar, enemyState, idx)"
           loading="eager"
           decoding="async"
           @error="onSpriteError($event, enemyChar)"
         />
-        <div class="fighter-shadow"></div>
       </div>
 
       <!-- Números de daño -->
@@ -130,21 +156,15 @@
     <!-- ── CONTROLES ──────────────────────────────────────── -->
     <div class="battle-controls compact" :class="{ visible: ready && !introActive && !battleOver }">
       <div class="quick-controls">
-        <button class="control-chip" @click="showMoveMenu = !showMoveMenu">Movimientos</button>
-        <button class="control-chip" :disabled="battleOver" @click="jump('player')">W / Space</button>
-        <button
-          class="control-chip coyol-chip"
-          :class="{ disabled: coyolUsed }"
-          :disabled="coyolUsed || battleOver"
-          @click="useCoyol"
-        >C · Coyol +15%</button>
+        <button class="control-chip" @mouseenter="playSound('hover')" @click="showMoveMenu = !showMoveMenu; playSound('click')">Movimientos</button>
+        <button class="control-chip" :disabled="battleOver" @mouseenter="playSound('hover')" @click="jump('player')">W / Space</button>
       </div>
 
       <transition name="move-panel">
         <div v-if="showMoveMenu" class="move-menu">
           <div class="move-menu-header">
             <span>Lista de movimientos</span>
-            <button class="close-moves" @click="showMoveMenu = false">✕</button>
+            <button class="close-moves" @mouseenter="playSound('hover')" @click="showMoveMenu = false; playSound('click')">✕</button>
           </div>
 
           <div class="move-list">
@@ -152,19 +172,25 @@
               v-for="atk in attacks"
               :key="atk.id"
               class="move-row"
-              :class="[atk.type, { disabled: !canAttack }]"
-              :disabled="!canAttack"
+              :class="[atk.type, { disabled: !canAttack || (atk.special && playerSpecialCooldown > 0) }]"
+              :disabled="!canAttack || (atk.special && playerSpecialCooldown > 0)"
+              @mouseenter="playSound('hover')"
               @click="playerAttack(atk)"
             >
               <span class="move-key">{{ atk.key }}</span>
               <span class="move-info">
-                <strong>{{ atk.name }}</strong>
+                <strong>
+                  {{ atk.name }}
+                  <span v-if="atk.special && playerSpecialCooldown > 0" class="cooldown-badge">
+                    ({{ playerSpecialCooldown }}s)
+                  </span>
+                </strong>
                 <small>{{ atk.note }}</small>
               </span>
               <span class="move-damage">-{{ atk.damage }}%</span>
             </button>
 
-            <button class="move-row utility" @click="jump('player')">
+            <button class="move-row utility" @mouseenter="playSound('hover')" @click="showMoveMenu = false; playSound('click'); jump('player')">
               <span class="move-key">W</span>
               <span class="move-info">
                 <strong>Saltar</strong>
@@ -173,50 +199,38 @@
               <span class="move-damage evade">Evadir</span>
             </button>
 
-            <button
-              class="move-row coyol"
-              :class="{ disabled: coyolUsed }"
-              :disabled="coyolUsed || battleOver"
-              @click="useCoyol"
-            >
-              <span class="move-key">C</span>
-              <span class="move-info">
-                <strong>Vino de Coyol</strong>
-                <small>Cura 15% una vez por combate.</small>
-              </span>
-              <span class="move-damage heal">+15%</span>
-            </button>
+
           </div>
         </div>
       </transition>
     </div>
 
-    <!-- ── PANTALLA FINAL ─────────────────────────────────── -->
-    <transition name="fade">
-      <div v-if="battleOver" class="game-over-screen">
-        <div class="go-bg-glow" :class="winner === 'player' ? 'win' : 'lose'"></div>
-        <div class="finish-him" :class="winner === 'player' ? 'win' : 'lose'">
-          {{ winner === 'player' ? 'VICTORIA' : 'DERROTA' }}
-        </div>
-        <div class="winner-text">
-          {{ winner === 'player' ? playerChar.name + ' TRIUNFÓ' : enemyChar.name + ' VENCIÓ' }}
-        </div>
-        <div class="go-buttons">
-          <button class="btn btn-primary" @click="restartBattle">REVANCHA</button>
-          <button class="btn btn-secondary" @click="emit('go-to', 'select')">CAMBIAR PERSONAJE</button>
-          <button class="btn btn-secondary" @click="emit('go-to', 'home')">MENÚ</button>
-        </div>
-      </div>
-    </transition>
+    <!-- ── PANTALLA DE RESULTADOS (COMPONENTE RESULT SCREEN) ── -->
+    <ResultScreen
+      :visible="battleOver"
+      :winner="winner"
+      :playerChar="playerChar"
+      :enemyChar="enemyChar"
+      :roundsPlayed="round"
+      :totalDamageDealt="playerDamageDealt"
+      :timeUsed="60 - timeLeft"
+      @restart="restartBattle"
+      @go-to="emit('go-to', $event)"
+    />
   </div>
 </template>
 
 <script>
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import CinematicIntro from './CinematicIntro.vue'
+import ResultScreen from './ResultScreen.vue'
 import { seguaAnimations } from '../data/seguaAnimations'
 import { cadejosAnimations } from '../data/cadejosAnimations'
 import { padreAnimations } from '../data/padreAnimations'
+import seguaMetadata from '../data/seguaMetadata.json'
+import padreMetadata from '../data/padreMetadata.json'
+import cadejosMetadata from '../data/cadejosMetadata.json'
+import { playSound } from '../modules/soundManager'
 
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms))
 const clamp = (v, min, max) => Math.min(max, Math.max(min, v))
@@ -235,20 +249,21 @@ const FRAME_MS = {
 }
 
 // Duraciones específicas por frame para La Segua.
-// Aquí jump_02 y jump_03 duran más para que el salto se note.
 const FRAME_DURATIONS = {
-  idle: [180, 180, 180],
-  walk: [120, 120, 120, 120],
-  jump: [120, 350, 450, 350, 140],
-  acid: [60, 60, 60, 60, 60, 60],
-  special: [60, 60, 60, 60, 60, 60],
-  hit: [120],
-  ko: [160],
+  idle: [180, 180, 180, 180],
+  walk: [120, 120, 120, 120, 120],
+  jump: [140, 420, 160],
+  attack: [120, 120, 120],
+  special: [120, 120, 120],
+  projectile: [120, 120, 120],
+  hit: [120, 120, 120],
+  ko: [140, 140, 240, 400],
+  victory: [220, 220]
 }
 
 export default {
   name: 'BattleScreen',
-  components: { CinematicIntro },
+  components: { CinematicIntro, ResultScreen },
   props: {
     characters: { type: Array, default: () => [] },
     selectedCharacter: { type: Object, default: null },
@@ -277,6 +292,7 @@ export default {
     // ── HP / Combate ───────────────────────────────────────────
     const playerHp = ref(100)
     const enemyHp = ref(100)
+    const playerDamageDealt = ref(0)
     const playerDmgBar = ref(100)
     const enemyDmgBar = ref(100)
     const timeLeft = ref(60)
@@ -293,12 +309,19 @@ export default {
     const damageNumbers = ref([])
     const specialEffect = ref('')
     const specialDirection = ref('from-player')
-    const coyolUsed = ref(false)
+    const activeProjectiles = ref([])
+    let nextProjectileId = 0
+    const coyolItem = ref(null)
+    let coyolSpawnTimeout = null
     const showMoveMenu = ref(false)
     const introActive = ref(true)
     const introPhase = ref(1)
     const playerVulnerable = ref(false)
     const enemyVulnerable = ref(false)
+
+    // ── Cooldowns ──────────────────────────────────────────────
+    const playerSpecialCooldown = ref(0)
+    const enemySpecialCooldown = ref(0)
 
     // ── Sprites animados ───────────────────────────────────────
     const playerState = ref('idle')
@@ -320,8 +343,6 @@ export default {
     })
 
     function getAnimationState(character, state) {
-      // Para La Segua, tanto special como attack usan los frames del ácido.
-      if (character?.type === 'segua' && (state === 'special' || state === 'attack')) return 'acid'
       return state
     }
 
@@ -378,6 +399,102 @@ export default {
       return 1200
     }
 
+    function getSpriteStyle(character, state, idx) {
+      const styles = {}
+
+      if (state === 'jump') {
+        styles.animationDuration = `${getJumpDuration(character)}ms`
+      }
+
+      if (character?.type === 'segua') {
+        const sprites = getSpritesFor(character, state)
+        if (sprites && sprites.length > 0) {
+          const frameIdx = idx % sprites.length
+
+          // Determine the metadata key
+          let folder = state
+          let prefix = state
+          if (state === 'hit') {
+            folder = 'hurt'
+            prefix = 'hurt'
+          } else if (state === 'ko') {
+            folder = 'ko'
+            prefix = 'ko'
+          }
+
+          const fileNum = String(frameIdx + 1).padStart(2, '0')
+          const key = `${folder}/${prefix}_${fileNum}.png`
+
+          const meta = seguaMetadata[key]
+          if (meta && meta.offsetPct !== undefined) {
+            const offsetPct = -meta.offsetPct * 100
+            styles['--feet-offset-pct'] = `${offsetPct}%`
+          }
+        }
+      } else if (character?.type === 'padre') {
+        const sprites = getSpritesFor(character, state)
+        if (sprites && sprites.length > 0) {
+          const frameIdx = idx % sprites.length
+
+          // Determine the metadata key
+          let folder = state
+          let prefix = state
+          if (state === 'hit') {
+            folder = character?.type === 'segua' ? 'hurt' : 'hit'
+            prefix = character?.type === 'segua' ? 'hurt' : 'hit'
+          } else if (state === 'ko') {
+            folder = 'ko'
+            prefix = 'ko'
+          } else if (state === 'block') {
+            folder = 'crouch'
+            prefix = 'crouch'
+          }
+
+          const fileNum = String(frameIdx + 1).padStart(2, '0')
+          const key = `${folder}/${prefix}_${fileNum}.png`
+
+          const meta = padreMetadata[key]
+          if (meta && meta.offsetPct !== undefined) {
+            const offsetPct = -meta.offsetPct * 100
+            styles['--feet-offset-pct'] = `${offsetPct}%`
+          }
+        }
+      } else if (character?.type === 'cadejos') {
+        const sprites = getSpritesFor(character, state)
+        if (sprites && sprites.length > 0) {
+          const frameIdx = idx % sprites.length
+
+          // Determine the metadata key
+          let folder = state
+          let prefix = state
+          if (state === 'hit') {
+            folder = 'hit'
+            prefix = 'hit'
+          } else if (state === 'ko') {
+            folder = 'ko'
+            prefix = 'ko'
+          } else if (state === 'block') {
+            folder = 'idle'
+            prefix = 'idle'
+          } else if (state === 'getup') {
+            folder = 'idle'
+            prefix = 'idle'
+          }
+
+          const fileNum = String(frameIdx + 1).padStart(2, '0')
+          const key = `${folder}/${prefix}_${fileNum}.png`
+
+          const meta = cadejosMetadata[key]
+          if (meta && meta.offsetPct !== undefined) {
+            const offsetPct = -meta.offsetPct * 100
+            styles['--feet-offset-pct'] = `${offsetPct}%`
+          }
+        }
+      }
+
+      return styles
+    }
+
     function startSpriteLoop(who) {
       const stateRef = who === 'player' ? playerState : enemyState
       const frameRef = who === 'player' ? playerFrame : enemyFrame
@@ -396,6 +513,9 @@ export default {
         const duration = getFrameDuration(character, state, frameRef.value)
 
         const timer = setTimeout(() => {
+          if (state === 'ko' && frameRef.value === count - 1) {
+            return
+          }
           frameRef.value = (frameRef.value + 1) % count
           nextFrame()
         }, duration)
@@ -438,13 +558,119 @@ export default {
           {
             id: 1,
             key: 'J',
-            name: 'Ataque Ácido',
+            name: 'Ataque de Garras',
+            damage: 10,
+            type: 'fast',
+            delay: 360,
+            range: 20,
+            animation: 'attack',
+            note: 'Zarpazo rápido a corta distancia.',
+          },
+          {
+            id: 2,
+            key: 'Q',
+            name: 'Energía Maldita',
+            damage: 22,
+            type: 'special',
+            delay: 800,
+            range: 48,
+            special: true,
+            effect: 'coyolBlast',
+            animation: 'projectile',
+            note: 'Lanza una esfera de energía maldita.',
+          },
+          {
+            id: 3,
+            key: 'L',
+            name: 'Grito Terrorífico',
+            damage: 16,
+            type: 'heavy',
+            delay: 520,
+            range: 20,
+            special: true,
+            effect: '',
+            animation: 'special',
+            note: 'Grito espectral a corta distancia.',
+          }
+        ]
+      }
+
+      if (playerChar.value?.type === 'padre') {
+        return [
+          {
+            id: 1,
+            key: 'J',
+            name: 'Zarpazo de Garras',
+            damage: 8,
+            type: 'fast',
+            delay: 360,
+            range: 20,
+            animation: 'attack',
+            note: 'Zarpazo rápido a corta distancia.',
+          },
+          {
+            id: 2,
+            key: 'Q',
+            name: 'Tirar la Cabeza',
             damage: 20,
             type: 'special',
-            delay: 720,
-            range: 34,
+            delay: 800,
+            range: 48,
             special: true,
-            note: 'Lanza un grito y escupe un chorro de ácido corrosivo.',
+            effect: 'headThrow',
+            animation: 'special',
+            note: 'Lanza su cabeza flotante (5s cooldown).',
+          },
+          {
+            id: 3,
+            key: 'L',
+            name: 'Grito del Padre',
+            damage: 12,
+            type: 'heavy',
+            delay: 520,
+            range: 20,
+            animation: 'heavy',
+            note: 'Grito espectral a corta distancia.',
+          }
+        ]
+      }
+
+      if (playerChar.value?.type === 'cadejos') {
+        return [
+          {
+            id: 1,
+            key: 'J',
+            name: 'Mordida Rápida',
+            damage: 10,
+            type: 'fast',
+            delay: 360,
+            range: 20,
+            animation: 'attack',
+            note: 'Mordida y zarpazo rápido.',
+          },
+          {
+            id: 2,
+            key: 'Q',
+            name: 'Carrera Espectral',
+            damage: 15,
+            type: 'special',
+            delay: 800,
+            range: 48,
+            special: true,
+            effect: 'shadowWolf',
+            animation: 'special',
+            note: 'Lanza un lobo de sombras (5s cooldown).',
+          },
+          {
+            id: 3,
+            key: 'L',
+            name: 'Zarpazo de Fuego',
+            damage: 20,
+            type: 'heavy',
+            delay: 520,
+            range: 20,
+            animation: 'heavy',
+            note: 'Zarpazo pesado a corta distancia.',
           }
         ]
       }
@@ -462,7 +688,7 @@ export default {
         },
         {
           id: 2,
-          key: 'K',
+          key: 'Q',
           name: playerChar.value?.skill || 'Habilidad',
           damage: 18,
           type: 'special',
@@ -528,11 +754,11 @@ export default {
       }
 
       if (character?.type === 'segua') {
-        return { effect: '', message: 'Ataque Ácido', damage: 20, shake: 'strong' }
+        return { effect: 'coyolBlast', message: 'Energía Maldita', damage: 22, shake: 'strong' }
       }
 
       if (character?.type === 'cadejos') {
-        return { effect: 'chainStrike', message: 'Cadenas sombrías', damage: 22, shake: 'strong' }
+        return { effect: 'shadowWolf', message: 'Carrera Espectral', damage: 15, shake: 'strong' }
       }
 
       return { effect: 'deadlyBite', message: 'Ataque especial', damage: 18, shake: 'strong' }
@@ -545,16 +771,46 @@ export default {
 
       const isPlayer = attacker === 'player'
       const attackerChar = isPlayer ? playerChar.value : enemyChar.value
-      const range = attack.range || (attack.special ? 34 : 18)
+      const targetChar = isPlayer ? enemyChar.value : playerChar.value
+
+      // Padre has a larger collision box (boss presence)
+      const sizeBonus = (attackerChar?.type === 'padre' || targetChar?.type === 'padre') ? 3.5 : 0
+      const range = (attack.range || (attack.special ? 34 : 18)) + sizeBonus
+
+      // Cooldown check for special attacks
+      if (attack.special) {
+        const cooldownRef = isPlayer ? playerSpecialCooldown : enemySpecialCooldown
+        if (cooldownRef.value > 0) {
+          if (isPlayer) {
+            showMessage(`RECARGANDO... ${cooldownRef.value}s`, 'hit')
+          }
+          return
+        }
+      }
 
       if (isPlayer) canAttack.value = false
 
       await approachTarget(attacker, range)
       if (battleOver.value) return
 
+      // Set cooldown if special attack is triggered
+      if (attack.special) {
+        const cooldownRef = isPlayer ? playerSpecialCooldown : enemySpecialCooldown
+        cooldownRef.value = 5
+      }
+
       const stateRef = isPlayer ? playerState : enemyState
-      stateRef.value = attack.special ? 'special' : 'attack'
+      stateRef.value = attack.animation || (attack.special ? 'special' : 'attack')
       specialDirection.value = isPlayer ? 'from-player' : 'from-enemy'
+
+      // Play attack sound based on type
+      if (attack.special) {
+        playSound('specialAttack')
+      } else if (attack.type === 'heavy') {
+        playSound('heavyAttack')
+      } else {
+        playSound('lightAttack')
+      }
 
       let damage = attack.damage
       let message = attack.name
@@ -562,10 +818,10 @@ export default {
 
       if (attack.special) {
         const sp = specialFor(attackerChar)
-        damage = sp.damage
-        message = sp.message
-        shake = sp.shake
-        specialEffect.value = sp.effect
+        damage = attack.damage !== undefined ? attack.damage : sp.damage
+        message = attack.name || sp.message
+        shake = attack.shake || sp.shake
+        specialEffect.value = attack.effect !== undefined ? attack.effect : sp.effect
       }
 
       if (isPlayer && enemyVulnerable.value && !attack.special) {
@@ -577,21 +833,29 @@ export default {
       showMessage(message, attack.special ? 'fight' : 'normal')
       await sleep(attack.special ? 360 : 190)
 
-      if (isInRange(range + 5)) {
-        doHit(attacker, damage, attack.special, shake)
-
-        if (attack.special && attackerChar?.type === 'segua' && isPlayer && !battleOver.value) {
-          enemyVulnerable.value = true
-          spawnDamageNumber('Vulnerable', enemyX.value, 44, 'vulnerable')
-          showMessage('Vulnerable', 'vulnerable')
-          clearTimeout(enemyVulnerableTimer)
-          enemyVulnerableTimer = setTimeout(() => {
-            enemyVulnerable.value = false
-          }, 4200)
+      if (attack.effect === 'headThrow' || attack.effect === 'shadowWolf' || (attack.special && (attackerChar?.type === 'padre' || attackerChar?.type === 'cadejos'))) {
+        if (specialEffect.value === 'headThrow' || specialEffect.value === 'shadowWolf') {
+          specialEffect.value = ''
         }
+        spawnProjectile(attacker, damage)
       } else {
-        showMessage('MISS', 'hit')
+        if (isInRange(range + 5)) {
+          doHit(attacker, damage, attack.special, shake)
+
+          if (attack.special && attackerChar?.type === 'segua' && isPlayer && !battleOver.value) {
+            enemyVulnerable.value = true
+            spawnDamageNumber('Vulnerable', enemyX.value, 44, 'vulnerable')
+            showMessage('Vulnerable', 'vulnerable')
+            clearTimeout(enemyVulnerableTimer)
+            enemyVulnerableTimer = setTimeout(() => {
+              enemyVulnerable.value = false
+            }, 4200)
+          }
+        } else {
+          showMessage('MISS', 'hit')
+        }
       }
+
 
       await sleep(attack.delay)
       specialEffect.value = ''
@@ -601,6 +865,7 @@ export default {
     }
 
     function playerAttack(atk) {
+      showMoveMenu.value = false
       performAttack('player', atk)
     }
 
@@ -612,6 +877,13 @@ export default {
       const isBlocking = targetState.value === 'block'
       const finalDamage = isBlocking ? Math.ceil(damage * 0.5) : damage
 
+      // Play hit or block sound
+      if (isBlocking) {
+        playSound('block')
+      } else {
+        playSound('hit')
+      }
+
       triggerFeedback(isBlocking ? 'light' : shake, isBlocking ? false : strong)
 
       if (isPlayer) {
@@ -622,6 +894,7 @@ export default {
         }, 150)
 
         enemyHp.value = Math.max(0, enemyHp.value - finalDamage)
+        playerDamageDealt.value += finalDamage
         spawnDamageNumber(finalDamage, enemyX.value, 32, isBlocking ? 'block-dmg' : 'enemy-dmg')
         applyKnockback('enemy', isBlocking ? 1 : (strong ? 6 : 3))
 
@@ -682,6 +955,7 @@ export default {
       if (stateRef.value === 'jump') return
 
       stateRef.value = 'jump'
+      playSound('jump')
 
       const char = fighter === 'player' ? playerChar.value : enemyChar.value
       const duration = getJumpDuration(char)
@@ -692,14 +966,79 @@ export default {
       }
     }
 
-    function useCoyol() {
-      if (battleOver.value || introActive.value || coyolUsed.value) return
+    function spawnCoyolItem() {
+      if (battleOver.value || introActive.value) return
+      if (coyolItem.value) return // Only one bottle exists at a time
 
-      playerHp.value = Math.min(100, playerHp.value + 15)
-      playerDmgBar.value = playerHp.value
-      coyolUsed.value = true
-      spawnDamageNumber('+15%', playerX.value, 42, 'heal')
-      showMessage('Vino de Coyol', 'heal')
+      coyolItem.value = {
+        x: Math.floor(Math.random() * 66) + 17, // random position between 17% and 83% of combat floor
+        visible: true
+      }
+      showMessage('¡VINO DE COYOL! (+15 VIDA)', 'heal')
+    }
+
+    function playPickupSound() {
+      try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)()
+        const osc = ctx.createOscillator()
+        const gain = ctx.createGain()
+
+        osc.type = 'sine'
+        // Retro rising dual chime
+        osc.frequency.setValueAtTime(587.33, ctx.currentTime) // D5
+        osc.frequency.setValueAtTime(880.00, ctx.currentTime + 0.08) // A5
+
+        gain.gain.setValueAtTime(0.12, ctx.currentTime)
+        gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.25)
+
+        osc.connect(gain)
+        gain.connect(ctx.destination)
+
+        osc.start()
+        osc.stop(ctx.currentTime + 0.25)
+      } catch (e) {
+        console.warn('Audio Context failed:', e)
+      }
+    }
+
+    function collectItem(who) {
+      if (!coyolItem.value || !coyolItem.value.visible) return
+
+      coyolItem.value.visible = false
+      const itemX = coyolItem.value.x
+
+      // Restore 15% health (max health is 100)
+      if (who === 'player') {
+        playerHp.value = Math.min(100, playerHp.value + 15)
+        playerDmgBar.value = playerHp.value
+        spawnDamageNumber('+15% HP', itemX, 36, 'heal')
+      } else {
+        enemyHp.value = Math.min(100, enemyHp.value + 15)
+        enemyDmgBar.value = enemyHp.value
+        spawnDamageNumber('+15% HP', itemX, 36, 'heal')
+      }
+
+      playPickupSound()
+      coyolItem.value = null
+
+      // Schedule next respawn after 20 seconds
+      clearTimeout(coyolSpawnTimeout)
+      coyolSpawnTimeout = setTimeout(() => {
+        spawnCoyolItem()
+      }, 20000)
+    }
+
+    function checkItemCollection() {
+      if (!coyolItem.value || !coyolItem.value.visible) return
+
+      const playerThreshold = playerChar.value?.type === 'padre' ? 6.0 : 4.5
+      const enemyThreshold = enemyChar.value?.type === 'padre' ? 6.0 : 4.5
+
+      if (Math.abs(playerX.value - coyolItem.value.x) < playerThreshold) {
+        collectItem('player')
+      } else if (Math.abs(enemyX.value - coyolItem.value.x) < enemyThreshold) {
+        collectItem('enemy')
+      }
     }
 
     function spawnDamageNumber(amount, x, y, type) {
@@ -753,7 +1092,7 @@ export default {
       clearInterval(timerInterval)
 
       timerInterval = setInterval(() => {
-        if (battleOver.value || introActive.value) return
+        if (battleOver.value || introActive.value || showMoveMenu.value) return
 
         timeLeft.value--
 
@@ -773,22 +1112,124 @@ export default {
       aiTimeout = setTimeout(async () => {
         if (battleOver.value || introActive.value) return
 
+        if (showMoveMenu.value) {
+          scheduleAiAttack()
+          return
+        }
+
         if (Math.random() > 0.78) {
           await jump('enemy')
         } else {
           let enemyAtk
           if (enemyChar.value?.type === 'segua') {
-            enemyAtk = {
-              id: 1,
-              name: 'Ataque Ácido',
-              damage: 20,
-              type: 'special',
-              delay: 720,
-              range: 34,
-              special: true,
+            const rand = Math.random()
+            if (rand > 0.66 && enemySpecialCooldown.value === 0) {
+              enemyAtk = {
+                id: 2,
+                name: 'Energía Maldita',
+                damage: 22,
+                type: 'special',
+                delay: 800,
+                range: 48,
+                special: true,
+                effect: 'coyolBlast',
+                animation: 'projectile',
+              }
+            } else if (rand > 0.33 && enemySpecialCooldown.value === 0) {
+              enemyAtk = {
+                id: 3,
+                name: 'Grito Terrorífico',
+                damage: 16,
+                type: 'heavy',
+                delay: 520,
+                range: 20,
+                special: true,
+                effect: '',
+                animation: 'special',
+              }
+            } else {
+              enemyAtk = {
+                id: 1,
+                name: 'Ataque de Garras',
+                damage: 10,
+                type: 'fast',
+                delay: 360,
+                range: 20,
+                animation: 'attack',
+              }
+            }
+          } else if (enemyChar.value?.type === 'padre') {
+            const rand = Math.random()
+            if (rand > 0.66 && enemySpecialCooldown.value === 0) {
+              enemyAtk = {
+                id: 2,
+                name: 'Tirar la Cabeza',
+                damage: 20,
+                type: 'special',
+                delay: 800,
+                range: 48,
+                special: true,
+                effect: 'headThrow',
+                animation: 'special',
+              }
+            } else if (rand > 0.33) {
+              enemyAtk = {
+                id: 3,
+                name: 'Grito del Padre',
+                damage: 12,
+                type: 'heavy',
+                delay: 520,
+                range: 20,
+                animation: 'heavy',
+              }
+            } else {
+              enemyAtk = {
+                id: 1,
+                name: 'Zarpazo de Garras',
+                damage: 8,
+                type: 'fast',
+                delay: 360,
+                range: 20,
+                animation: 'attack',
+              }
+            }
+          } else if (enemyChar.value?.type === 'cadejos') {
+            const rand = Math.random()
+            if (rand > 0.66 && enemySpecialCooldown.value === 0) {
+              enemyAtk = {
+                id: 2,
+                name: 'Carrera Espectral',
+                damage: 15,
+                type: 'special',
+                delay: 800,
+                range: 48,
+                special: true,
+                effect: 'shadowWolf',
+                animation: 'special',
+              }
+            } else if (rand > 0.33) {
+              enemyAtk = {
+                id: 3,
+                name: 'Zarpazo de Fuego',
+                damage: 20,
+                type: 'heavy',
+                delay: 520,
+                range: 20,
+                animation: 'heavy',
+              }
+            } else {
+              enemyAtk = {
+                id: 1,
+                name: 'Mordida Rápida',
+                damage: 10,
+                type: 'fast',
+                delay: 360,
+                range: 20,
+                animation: 'attack',
+              }
             }
           } else {
-            enemyAtk = Math.random() > 0.72
+            enemyAtk = (Math.random() > 0.72 && enemySpecialCooldown.value === 0)
               ? {
                   id: 2,
                   name: enemyChar.value?.skill || 'Especial',
@@ -820,8 +1261,15 @@ export default {
       ready.value = true
       canAttack.value = true
       showMessage('¡PELEA!', 'fight')
+      playSound('startFight')
       startTimer()
       scheduleAiAttack()
+
+      // Spawn first Coyol bottle after 10 seconds of combat
+      clearTimeout(coyolSpawnTimeout)
+      coyolSpawnTimeout = setTimeout(() => {
+        spawnCoyolItem()
+      }, 10000)
     }
 
     function runIntro() {
@@ -847,13 +1295,29 @@ export default {
       winner.value = win
       canAttack.value = false
 
-      if (win === 'enemy') playerState.value = 'ko'
-      if (win === 'player') enemyState.value = 'ko'
+      playSound('ko')
+
+      if (win === 'enemy') {
+        playerState.value = 'ko'
+        enemyState.value = 'victory'
+      }
+      if (win === 'player') {
+        enemyState.value = 'ko'
+        playerState.value = 'victory'
+
+        // Play victory fanfare after a short delay
+        setTimeout(() => {
+          if (battleOver.value && winner.value === 'player') {
+            playSound('victory')
+          }
+        }, 800)
+      }
     }
 
     function restartBattle() {
       playerHp.value = 100
       enemyHp.value = 100
+      playerDamageDealt.value = 0
       playerDmgBar.value = 100
       enemyDmgBar.value = 100
       timeLeft.value = 60
@@ -867,19 +1331,28 @@ export default {
       enemyState.value = 'idle'
       playerVulnerable.value = false
       enemyVulnerable.value = false
+      playerSpecialCooldown.value = 0
+      enemySpecialCooldown.value = 0
       specialEffect.value = ''
-      coyolUsed.value = false
+      activeProjectiles.value = []
+      coyolItem.value = null
       showMoveMenu.value = false
       damageNumbers.value = []
       showMessage('¡PELEA!', 'fight')
       startTimer()
       scheduleAiAttack()
+
+      // Spawn Coyol bottle after 10 seconds of combat
+      clearTimeout(coyolSpawnTimeout)
+      coyolSpawnTimeout = setTimeout(() => {
+        spawnCoyolItem()
+      }, 10000)
     }
 
     const keysPressed = {}
 
     function handleKeydown(event) {
-      if (battleOver.value || introActive.value) return
+      if (battleOver.value || introActive.value || showMoveMenu.value) return
 
       keysPressed[event.code] = true
 
@@ -889,22 +1362,17 @@ export default {
       }
 
       if (event.code === 'KeyS') {
-        const rigidStates = ['jump', 'attack', 'special', 'hit', 'ko']
+        const rigidStates = ['jump', 'attack', 'special', 'projectile', 'hit', 'ko', 'heavy']
         if (!rigidStates.includes(playerState.value)) {
           playerState.value = 'block'
         }
       }
 
-      if (playerChar.value?.type === 'segua') {
-        // Para La Segua, solo la tecla J realiza ataque
-        if (event.code === 'KeyJ') playerAttack(attacks.value[0])
-      } else {
-        if (event.code === 'KeyJ') playerAttack(attacks.value[0])
-        if (event.code === 'KeyK') playerAttack(attacks.value[1])
-        if (event.code === 'KeyL') playerAttack(attacks.value[2])
-      }
+      if (event.code === 'KeyJ') playerAttack(attacks.value[0])
+      if (event.code === 'KeyQ' || event.code === 'KeyK') playerAttack(attacks.value[1])
+      if (event.code === 'KeyL') playerAttack(attacks.value[2])
 
-      if (event.code === 'KeyC') useCoyol()
+
     }
 
     function handleKeyup(event) {
@@ -922,7 +1390,7 @@ export default {
     function updateMovement() {
       if (battleOver.value || introActive.value) return
 
-      const rigidStates = ['jump', 'attack', 'special', 'hit', 'ko', 'block']
+      const rigidStates = ['jump', 'attack', 'special', 'projectile', 'hit', 'ko', 'block', 'heavy']
       if (rigidStates.includes(playerState.value)) return
 
       let isMoving = false
@@ -946,10 +1414,10 @@ export default {
     function updateAiMovement() {
       if (battleOver.value || introActive.value) return
 
-      const rigidStates = ['jump', 'attack', 'special', 'hit', 'ko', 'block']
+      const rigidStates = ['jump', 'attack', 'special', 'projectile', 'hit', 'ko', 'block', 'heavy']
 
       // AI blocking chance if player is close and attacking
-      const isPlayerAttacking = playerState.value === 'attack' || playerState.value === 'special'
+      const isPlayerAttacking = playerState.value === 'attack' || playerState.value === 'special' || playerState.value === 'projectile' || playerState.value === 'heavy'
       if (isPlayerAttacking && getDistance() < 24 && Math.random() < 0.02) {
         if (!rigidStates.includes(enemyState.value)) {
           enemyState.value = 'block'
@@ -982,25 +1450,111 @@ export default {
       }
     }
 
+    function spawnProjectile(attacker, damage) {
+      const isPlayer = attacker === 'player'
+      const startX = isPlayer ? playerX.value + 6 : enemyX.value - 6
+      const direction = isPlayer ? 1 : -1
+      const attackerChar = isPlayer ? playerChar.value : enemyChar.value
+      const frameCount = attackerChar?.type === 'cadejos' ? 4 : 7
+      
+      activeProjectiles.value.push({
+        id: nextProjectileId++,
+        attacker,
+        x: startX,
+        y: 35,
+        speed: 1.8,
+        direction,
+        damage,
+        frame: 0,
+        frameCount,
+        lastFrameTime: Date.now()
+      })
+    }
+
+    function updateProjectiles() {
+      if (battleOver.value) {
+        activeProjectiles.value = []
+        return
+      }
+
+      const now = Date.now()
+      const projs = []
+      
+      for (const proj of activeProjectiles.value) {
+        // Move horizontally
+        proj.x += proj.speed * proj.direction
+        
+        // Cycle frames
+        if (now - proj.lastFrameTime > 80) {
+          proj.frame = (proj.frame + 1) % proj.frameCount
+          proj.lastFrameTime = now
+        }
+        
+        // Check for collision
+        const isPlayer = proj.attacker === 'player'
+        const targetX = isPlayer ? enemyX.value : playerX.value
+        
+        // Collision threshold
+        const collisionDist = 6.0
+        let hit = false
+        if (proj.direction > 0 && proj.x >= targetX - collisionDist) {
+          hit = true
+        } else if (proj.direction < 0 && proj.x <= targetX + collisionDist) {
+          hit = true
+        }
+        
+        if (hit) {
+          // Projectile damages enemy on collision
+          doHit(proj.attacker, proj.damage, true, 'strong')
+          // Disappears on impact (do not push to projs)
+        } else if (proj.x < -10 || proj.x > 110) {
+          // Disappears if off-screen (do not push to projs)
+        } else {
+          projs.push(proj)
+        }
+      }
+      
+      activeProjectiles.value = projs
+    }
+
     // Loop principal del juego.
     let rafId = null
 
     function gameLoop() {
-      updateMovement()
-      updateAiMovement()
+      if (!showMoveMenu.value) {
+        updateMovement()
+        updateAiMovement()
+        checkItemCollection()
+        updateProjectiles()
+      }
       rafId = requestAnimationFrame(gameLoop)
     }
 
+
+    let cooldownInterval = null
+
     onMounted(() => {
-      // Preload La Segua acid attack and jump frames to prevent disappearing/flickering
-      const framesToPreload = [
-        ...(seguaAnimations?.acid || []),
-        ...(seguaAnimations?.jump || [])
-      ]
+      // Preload Segua and Padre animation frames to prevent disappearing/flickering
+      const framesToPreload = []
+      const anims = [seguaAnimations, padreAnimations]
+      anims.forEach(anim => {
+        if (anim) {
+          Object.values(anim).forEach(frameArray => {
+            if (Array.isArray(frameArray)) {
+              framesToPreload.push(...frameArray)
+            }
+          })
+        }
+      })
       framesToPreload.forEach(src => {
         const img = new Image()
         img.src = src
       })
+
+      cooldownInterval = setInterval(() => {
+        if (playerSpecialCooldown.value > 0) playerSpecialCooldown.value--
+        if (enemySpecialCooldown.value > 0) enemySpecialCooldown.value--
+      }, 1000)
 
       ready.value = true
       startSpriteLoop('player')
@@ -1013,20 +1567,39 @@ export default {
 
     onUnmounted(() => {
       clearInterval(timerInterval)
+      clearInterval(cooldownInterval)
       clearTimeout(playerFrameTimer)
       clearTimeout(enemyFrameTimer)
       clearTimeout(aiTimeout)
       clearTimeout(msgTimer)
       clearTimeout(enemyVulnerableTimer)
+      clearTimeout(coyolSpawnTimeout)
       cancelAnimationFrame(rafId)
       window.removeEventListener('keydown', handleKeydown)
       window.removeEventListener('keyup', handleKeyup)
     })
 
+    function getProjectileSrc(proj) {
+      const isPlayer = proj.attacker === 'player'
+      const attackerChar = isPlayer ? playerChar.value : enemyChar.value
+      if (attackerChar?.type === 'cadejos') {
+        return cadejosAnimations.projectile[proj.frame % cadejosAnimations.projectile.length]
+      }
+      return padreAnimations.projectile[proj.frame % padreAnimations.projectile.length]
+    }
+
+    function getProjectileClass(proj) {
+      const isPlayer = proj.attacker === 'player'
+      const attackerChar = isPlayer ? playerChar.value : enemyChar.value
+      return attackerChar?.type === 'cadejos' ? 'cadejos-proj' : 'padre-proj'
+    }
+
     return {
       emit,
       playerChar,
       enemyChar,
+      getProjectileSrc,
+      getProjectileClass,
       stageBackgroundStyle,
       playerX,
       enemyX,
@@ -1049,7 +1622,7 @@ export default {
       specialEffect,
       specialDirection,
       specialEffectStyle,
-      coyolUsed,
+      coyolItem,
       showMoveMenu,
       introActive,
       introPhase,
@@ -1059,18 +1632,25 @@ export default {
       enemyFlash,
       playerVulnerable,
       enemyVulnerable,
+      playerSpecialCooldown,
+      enemySpecialCooldown,
       attacks,
       currentSprite,
       onSpriteError,
       playerAttack,
       restartBattle,
       jump,
-      useCoyol,
       getJumpDuration,
+      getSpriteStyle,
       hpClass,
       getSpritesFor,
       playerFrame,
       enemyFrame,
+      activeProjectiles,
+      padreAnimations,
+      cadejosAnimations,
+      playSound,
+      playerDamageDealt,
     }
   },
 }
@@ -1086,12 +1666,11 @@ export default {
   overflow: hidden;
   background: #050508;
   z-index: 1;
-  transform-origin: center bottom;
 }
 
-.battle-screen.shaking { animation: screenShake 0.18s ease both; }
-.battle-screen.shaking.strong { animation: screenShakeStrong 0.32s ease both; }
-.battle-screen.zoom-hit { animation: impactZoom 0.28s ease both; }
+.arena.shaking { animation: screenShake 0.18s ease both; }
+.arena.shaking.strong { animation: screenShakeStrong 0.32s ease both; }
+.arena.zoom-hit { animation: impactZoom 0.28s ease both; }
 
 @keyframes screenShake {
   0%, 100% { transform: translate(0, 0); }
@@ -1122,17 +1701,7 @@ export default {
   background-repeat: no-repeat;
 }
 
-.screen-flash {
-  position: fixed;
-  inset: 0;
-  z-index: 110;
-  background: rgba(255,255,255,0);
-  pointer-events: none;
-  transition: background 0.05s;
-}
 
-.screen-flash.active { background: rgba(255,255,255,0.18); }
-.screen-flash.active.strong { background: rgba(180, 0, 0, 0.24); }
 
 /* ── HUD ──────────────────────────────────────────────────── */
 .battle-header {
@@ -1140,7 +1709,7 @@ export default {
   grid-template-columns: 1fr auto 1fr;
   align-items: center;
   padding: 1rem 2rem 0.8rem;
-  background: linear-gradient(180deg, rgba(0,0,0,0.88), transparent);
+  background: transparent;
   position: relative;
   z-index: 20;
   opacity: 0;
@@ -1307,6 +1876,7 @@ export default {
   min-height: 58vh;
   opacity: 0;
   transition: opacity 0.6s ease;
+  transform-origin: center bottom;
 }
 
 .arena.visible { opacity: 1; }
@@ -1314,7 +1884,7 @@ export default {
 /* ── SPRITES ──────────────────────────────────────────────── */
 .fighter-sprite {
   position: absolute;
-  bottom: 7.5%;
+  bottom: 40px;
   translate: -50% 0;
   display: flex;
   flex-direction: column;
@@ -1325,14 +1895,15 @@ export default {
 }
 
 .sprite-img {
-  height: 26vh;
-  max-width: min(40vw, 320px);
+  height: calc(var(--base-height) * var(--display-scale));
+  max-width: min(50vw, 400px);
   object-fit: contain;
-  filter: drop-shadow(0 0 18px rgba(0,0,0,0.92));
-  transform-origin: center bottom;
+  filter: none;
+  transform-origin: bottom center;
+  transform: translateX(var(--feet-offset-pct, 0%));
 }
 
-.sprite-img.flipped { transform: scaleX(-1); }
+.sprite-img.flipped { transform: scaleX(-1) translateX(var(--feet-offset-pct, 0%)); }
 
 .sprite-img.flash-hit {
   filter: drop-shadow(0 0 0 white) brightness(4);
@@ -1341,49 +1912,43 @@ export default {
 
 .sprite-img.block {
   filter: drop-shadow(0 0 20px rgba(240, 208, 96, 0.8)) brightness(1.1) !important;
-  transform: scale(0.96) !important;
+  transform: translateX(var(--feet-offset-pct, 0%)) scale(0.96) !important;
 }
 
 .sprite-img.flipped.block {
-  transform: scaleX(-1) scale(0.96) !important;
+  transform: scaleX(-1) translateX(var(--feet-offset-pct, 0%)) scale(0.96) !important;
 }
 
-.fighter-sprite .sprite-img:not(.attack):not(.special):not(.hit):not(.jump):not(.ko):not(.block) {
-  animation: idleBreath 2.6s ease-in-out infinite;
-}
-
-@keyframes idleBreath {
-  0%,100% { translate: 0 0; }
-  50% { translate: 0 -6px; }
+.fighter-sprite .sprite-img:not(.attack):not(.special):not(.projectile):not(.hit):not(.jump):not(.ko):not(.block) {
+  /* No idleBreath animation to keep character strictly grounded */
 }
 
 .sprite-img.walk {
-  animation: walkBob 0.32s ease-in-out infinite !important;
-}
-
-@keyframes walkBob {
-  0%,100% { rotate: -0.8deg; translate: 0 0; }
-  50% { rotate: 0.8deg; translate: 0 -8px; }
+  /* No walkBob animation to keep character strictly grounded */
 }
 
 .fighter-sprite.player .sprite-img.attack,
-.fighter-sprite.player .sprite-img.special {
+.fighter-sprite.player .sprite-img.special,
+.fighter-sprite.player .sprite-img.projectile,
+.fighter-sprite.player .sprite-img.heavy {
   animation: attackLungeRight 0.36s ease-out !important;
 }
 
 @keyframes attackLungeRight {
-  0%,100% { transform: translateX(0); }
-  40% { transform: translateX(44px) scale(1.06); }
+  0%,100% { transform: translateX(var(--feet-offset-pct, 0%)); }
+  40% { transform: translateX(calc(44px + var(--feet-offset-pct, 0%))) scale(1.06); }
 }
 
 .fighter-sprite.enemy .sprite-img.attack,
-.fighter-sprite.enemy .sprite-img.special {
+.fighter-sprite.enemy .sprite-img.special,
+.fighter-sprite.enemy .sprite-img.projectile,
+.fighter-sprite.enemy .sprite-img.heavy {
   animation: attackLungeLeft 0.36s ease-out !important;
 }
 
 @keyframes attackLungeLeft {
-  0%,100% { transform: scaleX(-1) translateX(0); }
-  40% { transform: scaleX(-1) translateX(44px) scale(1.06); }
+  0%,100% { transform: scaleX(-1) translateX(var(--feet-offset-pct, 0%)); }
+  40% { transform: scaleX(-1) translateX(calc(44px + var(--feet-offset-pct, 0%))) scale(1.06); }
 }
 
 .sprite-img.hit {
@@ -1407,15 +1972,15 @@ export default {
 }
 
 @keyframes jumpMove {
-  0%,100% { transform: translateY(0); }
-  35% { transform: translateY(-120px); }
-  68% { transform: translateY(-125px); }
+  0%,100% { transform: translateX(var(--feet-offset-pct, 0%)) translateY(0); }
+  35% { transform: translateX(var(--feet-offset-pct, 0%)) translateY(-120px); }
+  68% { transform: translateX(var(--feet-offset-pct, 0%)) translateY(-125px); }
 }
 
 @keyframes jumpMoveFlipped {
-  0%,100% { transform: scaleX(-1) translateY(0); }
-  35% { transform: scaleX(-1) translateY(-120px); }
-  68% { transform: scaleX(-1) translateY(-125px); }
+  0%,100% { transform: scaleX(-1) translateX(var(--feet-offset-pct, 0%)) translateY(0); }
+  35% { transform: scaleX(-1) translateX(var(--feet-offset-pct, 0%)) translateY(-120px); }
+  68% { transform: scaleX(-1) translateX(var(--feet-offset-pct, 0%)) translateY(-125px); }
 }
 
 .fighter-sprite.player .sprite-img.ko {
@@ -1427,23 +1992,36 @@ export default {
 }
 
 @keyframes koFall {
-  to { transform: rotate(-82deg) translateY(35px); opacity: 0.38; }
+  to { transform: translateX(var(--feet-offset-pct, 0%)) rotate(-82deg) translateY(15px); opacity: 1.0; }
 }
 
 @keyframes koFallEnemy {
-  to { transform: scaleX(-1) rotate(82deg) translateY(35px); opacity: 0.38; }
+  to { transform: scaleX(-1) translateX(var(--feet-offset-pct, 0%)) rotate(82deg) translateY(15px); opacity: 1.0; }
 }
 
+.fighter-sprite.segua {
+  --display-scale: 1.0;
+  --base-height: 280px; /* Scale Segua to 280px tall */
+}
 .fighter-sprite.segua .sprite-img {
-  filter: drop-shadow(0 0 20px rgba(160,216,239,0.42)) drop-shadow(0 0 8px rgba(0,0,0,0.9));
+  filter: none;
 }
 
+.fighter-sprite.cadejos {
+  --display-scale: 1.0;
+  --base-height: 320px;
+}
 .fighter-sprite.cadejos .sprite-img {
-  filter: drop-shadow(0 0 20px rgba(192,57,43,0.42)) drop-shadow(0 0 8px rgba(0,0,0,0.9));
+  max-width: min(55vw, 450px);
+  filter: none;
 }
 
+.fighter-sprite.padre {
+  --display-scale: 1.0;
+  --base-height: 300px;
+}
 .fighter-sprite.padre .sprite-img {
-  filter: drop-shadow(0 0 20px rgba(0,212,255,0.42)) drop-shadow(0 0 8px rgba(0,0,0,0.9));
+  filter: none;
 }
 
 .fighter-sprite.vulnerable::before {
@@ -1460,21 +2038,57 @@ export default {
   z-index: 3;
 }
 
-.fighter-shadow {
-  width: 82%;
-  height: 18px;
-  margin-top: -18px;
-  border-radius: 999px;
-  background: radial-gradient(ellipse, rgba(0,0,0,0.82), transparent 72%);
-  animation: shadowBreath 2.6s ease-in-out infinite;
-}
 
-@keyframes shadowBreath {
-  0%,100% { transform: scaleX(1); opacity: 0.82; }
-  50% { transform: scaleX(0.86); opacity: 0.54; }
-}
 
 /* ── EFECTOS ESPECIALES ───────────────────────────────────── */
+/* ── VINO DE COYOL PICKUP ITEM ───────────────────────────── */
+.coyol-item {
+  position: absolute;
+  bottom: 0;
+  translate: -50% 0;
+  width: 80px;
+  height: 80px;
+  z-index: 10;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.coyol-item-img {
+  height: 80px;
+  width: auto;
+  object-fit: contain;
+  filter: drop-shadow(0 0 15px rgba(240, 208, 96, 0.82));
+  animation: coyolFloat 2s ease-in-out infinite;
+}
+
+@keyframes coyolFloat {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+
+.coyol-particle {
+  position: absolute;
+  width: 4px;
+  height: 4px;
+  background: #f0d060;
+  box-shadow: 0 0 6px #f0d060;
+  border-radius: 50%;
+  opacity: 0;
+}
+
+.coyol-particle.p1 { left: 20%; bottom: 10px; animation: coyolSparkle 1.8s infinite 0s; }
+.coyol-particle.p2 { right: 25%; bottom: 20px; animation: coyolSparkle 2.2s infinite 0.4s; }
+.coyol-particle.p3 { left: 45%; bottom: 5px; animation: coyolSparkle 1.5s infinite 0.8s; }
+.coyol-particle.p4 { right: 15%; bottom: 30px; animation: coyolSparkle 2.0s infinite 1.2s; }
+
+@keyframes coyolSparkle {
+  0% { transform: translateY(0) scale(0.5); opacity: 0; }
+  50% { opacity: 0.8; }
+  100% { transform: translateY(-40px) scale(1.2); opacity: 0; }
+}
+
 .special-effect {
   position: absolute;
   top: 34%;
@@ -1483,25 +2097,65 @@ export default {
   z-index: 22;
 }
 
+.special-effect.coyolBlast::before {
+  content: '';
+  position: absolute;
+  top: 35px;
+  left: 0;
+  width: 100px;
+  height: 44px;
+  background: url('/src/assets/images/characters/segua/projectile.png') no-repeat center;
+  background-size: contain;
+  animation: headThrowFx 0.72s ease-in forwards;
+}
+
+.special-effect.from-enemy.coyolBlast::before {
+  animation-name: headThrowFxReverse;
+  transform: scaleX(-1);
+}
+
 .special-effect.headThrow::before {
   content: '';
   position: absolute;
   top: 35px;
   left: 0;
-  width: 64px;
-  height: 64px;
-  border-radius: 50%;
-  background:
-    radial-gradient(circle at 52% 42%, rgba(255,255,255,0.95) 0 8%, transparent 9%),
-    radial-gradient(circle at 38% 38%, rgba(255,255,255,0.95) 0 8%, transparent 9%),
-    radial-gradient(circle, rgba(200,245,255,0.98), rgba(0,212,255,0.36) 58%, transparent 70%);
-  box-shadow: 0 0 30px rgba(0,212,255,0.95);
+  width: 90px;
+  height: 70px;
+  background: url('/src/assets/images/characters/padre/projectile.png') no-repeat center;
+  background-size: contain;
   animation: headThrowFx 0.72s ease-in forwards;
 }
 
 .special-effect.from-enemy.headThrow::before {
   animation-name: headThrowFxReverse;
+  transform: scaleX(-1);
 }
+
+.projectile-entity {
+  position: absolute;
+  bottom: 160px; /* Aligned to raised combat floor, chest/head level */
+  width: 90px;
+  height: 90px;
+  z-index: 21;
+  pointer-events: none;
+  transform-origin: center center;
+}
+.projectile-entity.cadejos-proj {
+  bottom: 85px; /* raised lower height matching the dog's height */
+  width: 100px;
+  height: 100px;
+}
+.projectile-entity.padre-proj {
+  bottom: 160px;
+}
+
+.projectile-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  filter: drop-shadow(0 0 10px rgba(90, 160, 255, 0.7));
+}
+
 
 @keyframes headThrowFx {
   from { opacity: 1; transform: translateX(0) rotate(0deg) scale(0.8); }
@@ -1726,6 +2380,12 @@ export default {
   border-color: rgba(240,208,96,0.45);
 }
 
+.cooldown-badge {
+  color: var(--cyan-soul);
+  font-size: 0.65rem;
+  margin-left: 0.4rem;
+}
+
 .move-menu {
   margin-top: 0.8rem;
   background: linear-gradient(180deg, rgba(10,10,16,0.96), rgba(5,5,8,0.94));
@@ -1873,8 +2533,7 @@ export default {
   justify-content: center;
   text-align: center;
   padding: 2rem;
-  background: rgba(0,0,0,0.75);
-  backdrop-filter: blur(6px);
+  background: radial-gradient(circle at center, #120e18 0%, #050407 100%);
 }
 
 .go-bg-glow {
@@ -1965,9 +2624,10 @@ export default {
   }
 
   .sprite-img {
-    height: clamp(150px, 30vh, 280px);
-    max-width: 46vw;
+    max-width: 48vw;
   }
+
+
 
   .arena { min-height: 54vh; }
 

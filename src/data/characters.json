@@ -8,6 +8,7 @@
     "speed": 5,
     "mysticism": 5,
     "image": "/src/assets/images/characters/segua.png",
+    "portrait": "/src/assets/images/ui/portraits/segua_portrait.png",
     "sprites": {
       "idle": [
         "/src/assets/images/characters/segua.png"
@@ -45,6 +46,7 @@
     "speed": 4,
     "defense": 3,
     "image": "/src/assets/images/characters/cadejos.png",
+    "portrait": "/src/assets/images/ui/portraits/cadejo_portrait.png",
     "sprites": {
       "idle": [
         "/src/assets/images/characters/cadejos.png"
@@ -79,6 +81,7 @@
     "speed": 2,
     "range": 5,
     "image": "/src/assets/images/characters/padre-sin-cabeza.png",
+    "portrait": "/src/assets/images/ui/portraits/padre_portrait.png",
     "sprites": {
       "idle": [
         "/src/assets/images/characters/padre-sin-cabeza.png"

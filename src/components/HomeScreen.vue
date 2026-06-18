@@ -297,7 +297,7 @@ export default {
   gap: 1rem;
   margin-top: 2.5rem;
   width: 100%;
-  max-width: 380px;
+  max-width: 420px;
   opacity: 0;
   transform: translateY(20px);
   transition: opacity 0.6s ease, transform 0.6s ease;
@@ -312,8 +312,9 @@ export default {
   align-items: center;
   justify-content: center;
   gap: 0.8rem;
-  font-size: 0.9rem;
-  padding: 1rem 2rem;
+  font-size: 0.72rem;
+  line-height: 1.4;
+  padding: 1rem 1.5rem;
   width: 100%;
   position: relative;
   overflow: hidden;

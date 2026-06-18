@@ -27,7 +27,7 @@
 
         <img
           v-if="previewChar"
-          :src="previewChar.image"
+          :src="previewChar.portrait || previewChar.image"
           :alt="previewChar.name"
           class="fighter-big-img"
         />
@@ -54,7 +54,7 @@
 
         <img
           v-if="enemyPreview"
-          :src="enemyPreview.image"
+          :src="enemyPreview.portrait || enemyPreview.image"
           :alt="enemyPreview.name"
           class="fighter-big-img enemy-img"
         />
@@ -91,7 +91,7 @@
             }
           ]"
           :style="{ animationDelay: i * 0.08 + 's' }"
-          @mouseenter="hoveredChar = char.id"
+          @mouseenter="hoveredChar = char.id; playSound('hover')"
           @mouseleave="hoveredChar = null"
           @click="selectChar(char)"
         >
@@ -100,7 +100,7 @@
           <span class="corner-bl"></span>
           <span class="corner-br"></span>
 
-          <img :src="char.image" :alt="char.name" />
+          <img :src="char.portrait || char.image" :alt="char.name" />
 
           <div class="roster-name">
             {{ shortName(char.name) }}
@@ -148,7 +148,7 @@
     <transition name="confirm-in">
       <div v-if="selectedCharObj" class="confirm-bar">
         <div class="confirm-left">
-          <img :src="selectedCharObj.image" :alt="selectedCharObj.name" />
+          <img :src="selectedCharObj.portrait || selectedCharObj.image" :alt="selectedCharObj.name" />
 
           <div>
             <span>Seleccionado</span>
@@ -156,7 +156,7 @@
           </div>
         </div>
 
-        <button class="btn btn-primary confirm-btn" @click="confirm">
+        <button class="btn btn-primary confirm-btn" @mouseenter="playSound('hover')" @click="confirm">
           ⚔ IR A LA BATALLA
         </button>
       </div>
@@ -167,6 +167,7 @@
 <script>
 import { ref, computed, onMounted } from 'vue'
 import StatBar from './StatBar.vue'
+import { playSound } from '../modules/soundManager'
 
 export default {
   name: 'SelectScreen',
@@ -227,6 +228,7 @@ export default {
       }
 
       selectedId.value = char.id
+      playSound('select')
       flashScreen()
     }
 
@@ -264,7 +266,8 @@ export default {
       selectChar,
       confirm,
       shortName,
-      emit
+      emit,
+      playSound
     }
   }
 }
@@ -666,8 +669,8 @@ export default {
 .roster-card img {
   width: 100%;
   height: 100%;
-  object-fit: cover;
-  object-position: top center;
+  object-fit: contain;
+  object-position: center;
   filter: brightness(0.72) contrast(1.12);
   transition: 0.3s ease;
 }
@@ -824,8 +827,8 @@ export default {
 .confirm-left img {
   width: 54px;
   height: 54px;
-  object-fit: cover;
-  object-position: top center;
+  object-fit: contain;
+  object-position: center;
   border: 1px solid rgba(200,168,75,0.38);
 }
 

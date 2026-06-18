@@ -23,7 +23,7 @@
     <transition name="slide-up-btn">
       <div v-if="selectedId" class="confirm-row">
         <div class="confirm-char-preview">
-          <img :src="selectedChar.image" :alt="selectedChar.name" />
+          <img :src="selectedChar.portrait || selectedChar.image" :alt="selectedChar.name" />
           <div class="confirm-info">
             <div class="confirm-name">{{ selectedChar.name }}</div>
             <div class="confirm-skill">{{ selectedChar.skill }}</div>
@@ -149,7 +149,7 @@ export default {
 .confirm-char-preview { display: flex; align-items: center; gap: 1rem; }
 .confirm-char-preview img {
   height: 60px; width: 60px;
-  object-fit: cover; object-position: top;
+  object-fit: contain; object-position: center;
   border: 1px solid rgba(200,168,75,0.4);
 }
 .confirm-name { font-family: var(--font-display); font-size: 1rem; font-weight: 700; color: var(--gold-bright); }

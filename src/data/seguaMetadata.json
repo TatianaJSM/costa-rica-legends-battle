@@ -1,0 +1,458 @@
+{
+  "attack/atack_01.png": {
+    "width": 636,
+    "height": 989,
+    "feetX": 317.5,
+    "offsetPct": -0.0007861635220126062,
+    "collisionBox": {
+      "left": 0,
+      "top": 0,
+      "right": 636,
+      "bottom": 989
+    }
+  },
+  "attack/atack_02.png": {
+    "width": 761,
+    "height": 950,
+    "feetX": 380,
+    "offsetPct": -0.0006570302233902536,
+    "collisionBox": {
+      "left": 0,
+      "top": 0,
+      "right": 761,
+      "bottom": 950
+    }
+  },
+  "attack/atack_03.png": {
+    "width": 870,
+    "height": 982,
+    "feetX": 428,
+    "offsetPct": -0.008045977011494232,
+    "collisionBox": {
+      "left": 0,
+      "top": 0,
+      "right": 870,
+      "bottom": 982
+    }
+  },
+  "attack/atack_04.png": {
+    "width": 884,
+    "height": 949,
+    "feetX": 392.5,
+    "offsetPct": -0.055995475113122195,
+    "collisionBox": {
+      "left": 0,
+      "top": 0,
+      "right": 884,
+      "bottom": 949
+    }
+  },
+  "attack/atack_05.png": {
+    "width": 994,
+    "height": 846,
+    "feetX": 345.5,
+    "offsetPct": -0.1524144869215292,
+    "collisionBox": {
+      "left": 0,
+      "top": 0,
+      "right": 994,
+      "bottom": 846
+    }
+  },
+  "attack/atack_06.png": {
+    "width": 826,
+    "height": 901,
+    "feetX": 428.5,
+    "offsetPct": 0.018765133171912862,
+    "collisionBox": {
+      "left": 0,
+      "top": 0,
+      "right": 826,
+      "bottom": 901
+    }
+  },
+  "attack/attack_01.png": {
+    "width": 97,
+    "height": 107,
+    "feetX": 42.5,
+    "offsetPct": -0.061855670103092786,
+    "collisionBox": {
+      "left": 0,
+      "top": 0,
+      "right": 97,
+      "bottom": 107
+    }
+  },
+  "attack/attack_02.png": {
+    "width": 99,
+    "height": 108,
+    "feetX": 39.5,
+    "offsetPct": -0.101010101010101,
+    "collisionBox": {
+      "left": 0,
+      "top": 0,
+      "right": 99,
+      "bottom": 108
+    }
+  },
+  "attack/attack_03.png": {
+    "width": 172,
+    "height": 111,
+    "feetX": 39,
+    "offsetPct": -0.2732558139534884,
+    "collisionBox": {
+      "left": 0,
+      "top": 0,
+      "right": 172,
+      "bottom": 111
+    }
+  },
+  "hurt/hurt_01.png": {
+    "width": 97,
+    "height": 117,
+    "feetX": 49,
+    "offsetPct": 0.005154639175257714,
+    "collisionBox": {
+      "left": 0,
+      "top": 0,
+      "right": 97,
+      "bottom": 117
+    }
+  },
+  "hurt/hurt_02.png": {
+    "width": 98,
+    "height": 115,
+    "feetX": 49.5,
+    "offsetPct": 0.005102040816326481,
+    "collisionBox": {
+      "left": 0,
+      "top": 0,
+      "right": 98,
+      "bottom": 115
+    }
+  },
+  "hurt/hurt_03.png": {
+    "width": 100,
+    "height": 115,
+    "feetX": 44.5,
+    "offsetPct": -0.05499999999999999,
+    "collisionBox": {
+      "left": 0,
+      "top": 0,
+      "right": 100,
+      "bottom": 115
+    }
+  },
+  "idle/idle_01.png": {
+    "width": 89,
+    "height": 119,
+    "feetX": 37.5,
+    "offsetPct": -0.07865168539325845,
+    "collisionBox": {
+      "left": 0,
+      "top": 0,
+      "right": 89,
+      "bottom": 119
+    }
+  },
+  "idle/idle_02.png": {
+    "width": 81,
+    "height": 119,
+    "feetX": 39.5,
+    "offsetPct": -0.012345679012345678,
+    "collisionBox": {
+      "left": 0,
+      "top": 0,
+      "right": 81,
+      "bottom": 119
+    }
+  },
+  "idle/idle_03.png": {
+    "width": 84,
+    "height": 119,
+    "feetX": 41,
+    "offsetPct": -0.011904761904761918,
+    "collisionBox": {
+      "left": 0,
+      "top": 0,
+      "right": 84,
+      "bottom": 119
+    }
+  },
+  "idle/idle_04.png": {
+    "width": 81,
+    "height": 119,
+    "feetX": 39.5,
+    "offsetPct": -0.012345679012345678,
+    "collisionBox": {
+      "left": 0,
+      "top": 0,
+      "right": 81,
+      "bottom": 119
+    }
+  },
+  "jump/jump_01.png": {
+    "width": 79,
+    "height": 110,
+    "feetX": 21.5,
+    "offsetPct": -0.22784810126582278,
+    "collisionBox": {
+      "left": 0,
+      "top": 0,
+      "right": 79,
+      "bottom": 110
+    }
+  },
+  "jump/jump_02.png": {
+    "width": 79,
+    "height": 107,
+    "feetX": 36.5,
+    "offsetPct": -0.03797468354430378,
+    "collisionBox": {
+      "left": 0,
+      "top": 0,
+      "right": 79,
+      "bottom": 107
+    }
+  },
+  "jump/jump_03.png": {
+    "width": 102,
+    "height": 105,
+    "feetX": 53,
+    "offsetPct": 0.019607843137254943,
+    "collisionBox": {
+      "left": 0,
+      "top": 0,
+      "right": 102,
+      "bottom": 105
+    }
+  },
+  "jump/jump_04.png": {
+    "width": 761,
+    "height": 816,
+    "feetX": 344.5,
+    "offsetPct": -0.04730617608409987,
+    "collisionBox": {
+      "left": 0,
+      "top": 0,
+      "right": 761,
+      "bottom": 816
+    }
+  },
+  "jump/jump_05.png": {
+    "width": 637,
+    "height": 959,
+    "feetX": 318,
+    "offsetPct": -0.0007849293563579329,
+    "collisionBox": {
+      "left": 0,
+      "top": 0,
+      "right": 637,
+      "bottom": 959
+    }
+  },
+  "ko/ko_01.png": {
+    "width": 86,
+    "height": 105,
+    "feetX": 42.5,
+    "offsetPct": -0.005813953488372103,
+    "collisionBox": {
+      "left": 0,
+      "top": 0,
+      "right": 86,
+      "bottom": 105
+    }
+  },
+  "ko/ko_02.png": {
+    "width": 93,
+    "height": 75,
+    "feetX": 42,
+    "offsetPct": -0.04838709677419356,
+    "collisionBox": {
+      "left": 0,
+      "top": 0,
+      "right": 93,
+      "bottom": 75
+    }
+  },
+  "ko/ko_03.png": {
+    "width": 89,
+    "height": 56,
+    "feetX": 45.5,
+    "offsetPct": 0.011235955056179803,
+    "collisionBox": {
+      "left": 0,
+      "top": 0,
+      "right": 89,
+      "bottom": 56
+    }
+  },
+  "ko/ko_04.png": {
+    "width": 119,
+    "height": 54,
+    "feetX": 62,
+    "offsetPct": 0.021008403361344574,
+    "collisionBox": {
+      "left": 0,
+      "top": 0,
+      "right": 119,
+      "bottom": 54
+    }
+  },
+  "projectile/projectile_01.png": {
+    "width": 98,
+    "height": 121,
+    "feetX": 42.5,
+    "offsetPct": -0.06632653061224492,
+    "collisionBox": {
+      "left": 0,
+      "top": 0,
+      "right": 98,
+      "bottom": 121
+    }
+  },
+  "projectile/projectile_02.png": {
+    "width": 107,
+    "height": 119,
+    "feetX": 42.5,
+    "offsetPct": -0.10280373831775702,
+    "collisionBox": {
+      "left": 0,
+      "top": 0,
+      "right": 107,
+      "bottom": 119
+    }
+  },
+  "projectile/projectile_03.png": {
+    "width": 149,
+    "height": 119,
+    "feetX": 71.5,
+    "offsetPct": -0.02013422818791949,
+    "collisionBox": {
+      "left": 0,
+      "top": 0,
+      "right": 149,
+      "bottom": 119
+    }
+  },
+  "special/special_01.png": {
+    "width": 96,
+    "height": 110,
+    "feetX": 47.5,
+    "offsetPct": -0.005208333333333315,
+    "collisionBox": {
+      "left": 0,
+      "top": 0,
+      "right": 96,
+      "bottom": 110
+    }
+  },
+  "special/special_02.png": {
+    "width": 106,
+    "height": 110,
+    "feetX": 53.5,
+    "offsetPct": 0.004716981132075526,
+    "collisionBox": {
+      "left": 0,
+      "top": 0,
+      "right": 106,
+      "bottom": 110
+    }
+  },
+  "special/special_03.png": {
+    "width": 108,
+    "height": 120,
+    "feetX": 55,
+    "offsetPct": 0.0092592592592593,
+    "collisionBox": {
+      "left": 0,
+      "top": 0,
+      "right": 108,
+      "bottom": 120
+    }
+  },
+  "victory/victory_01.png": {
+    "width": 74,
+    "height": 121,
+    "feetX": 36.5,
+    "offsetPct": -0.006756756756756743,
+    "collisionBox": {
+      "left": 0,
+      "top": 0,
+      "right": 74,
+      "bottom": 121
+    }
+  },
+  "victory/victory_02.png": {
+    "width": 92,
+    "height": 123,
+    "feetX": 47.5,
+    "offsetPct": 0.016304347826086918,
+    "collisionBox": {
+      "left": 0,
+      "top": 0,
+      "right": 92,
+      "bottom": 123
+    }
+  },
+  "walk/walk_01.png": {
+    "width": 63,
+    "height": 121,
+    "feetX": 31,
+    "offsetPct": -0.007936507936507964,
+    "collisionBox": {
+      "left": 0,
+      "top": 0,
+      "right": 63,
+      "bottom": 121
+    }
+  },
+  "walk/walk_02.png": {
+    "width": 63,
+    "height": 121,
+    "feetX": 31,
+    "offsetPct": -0.007936507936507964,
+    "collisionBox": {
+      "left": 0,
+      "top": 0,
+      "right": 63,
+      "bottom": 121
+    }
+  },
+  "walk/walk_03.png": {
+    "width": 70,
+    "height": 120,
+    "feetX": 35.5,
+    "offsetPct": 0.0071428571428571175,
+    "collisionBox": {
+      "left": 0,
+      "top": 0,
+      "right": 70,
+      "bottom": 120
+    }
+  },
+  "walk/walk_04.png": {
+    "width": 69,
+    "height": 121,
+    "feetX": 34,
+    "offsetPct": -0.00724637681159418,
+    "collisionBox": {
+      "left": 0,
+      "top": 0,
+      "right": 69,
+      "bottom": 121
+    }
+  },
+  "walk/walk_05.png": {
+    "width": 84,
+    "height": 121,
+    "feetX": 42.5,
+    "offsetPct": 0.005952380952380931,
+    "collisionBox": {
+      "left": 0,
+      "top": 0,
+      "right": 84,
+      "bottom": 121
+    }
+  }
+}

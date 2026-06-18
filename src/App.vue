@@ -17,6 +17,20 @@
         @go-to="goTo"
       />
     </transition>
+
+    <!-- Botón de silencio global -->
+    <button class="audio-toggle-btn" @click="handleToggleMute" :title="isMuted ? 'Activar Sonido' : 'Silenciar'">
+      {{ isMuted ? '🔇' : '🔊' }}
+    </button>
+
+    <!-- Contenedor del reproductor de YouTube (iframe directo con políticas de autoplay permitidas) -->
+    <iframe
+      id="yt-menu-player"
+      src="https://www.youtube.com/embed/htZ29c-k-L8?enablejsapi=1&controls=0&disablekb=1&fs=0&loop=1&playlist=htZ29c-k-L8&rel=0&showinfo=0"
+      style="position: fixed; bottom: -500px; left: -500px; width: 200px; height: 200px; pointer-events: none; z-index: -9999;"
+      allow="autoplay; encrypted-media"
+      frameborder="0"
+    ></iframe>
   </div>
 </template>
 
@@ -25,6 +39,7 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 import HomeScreen from './components/StartScreen.vue'
 import SelectScreen from './components/SelectScreen.vue'
 import BattleScreen from './components/BattleScreen.vue'
+import { isMuted, toggleMute, startBGM, stopBGM, initAudio, playSound } from './modules/soundManager'
 
 export default {
   name: 'App',
@@ -127,6 +142,14 @@ export default {
 
       transitionName.value = toIdx >= fromIdx ? 'slide-up' : 'slide-down'
       currentScreen.value = screen
+
+      // Transición de sonido y música
+      playSound('click')
+      if (screen === 'battle') {
+        startBGM('battle')
+      } else {
+        startBGM('menu')
+      }
     }
 
     function onSelectCharacter(char) {
@@ -138,6 +161,24 @@ export default {
       }
 
       goTo('battle')
+    }
+
+    function handleToggleMute() {
+      toggleMute()
+      playSound('click')
+    }
+
+    function startAudioOnInteraction() {
+      initAudio()
+      if (currentScreen.value === 'battle') {
+        startBGM('battle')
+      } else {
+        startBGM('menu')
+      }
+      // Limpiar listeners una vez que empiece el audio
+      window.removeEventListener('click', startAudioOnInteraction)
+      window.removeEventListener('keydown', startAudioOnInteraction)
+      window.removeEventListener('touchstart', startAudioOnInteraction)
     }
 
     // ── Partículas de fondo ──────────────────────────────
@@ -207,11 +248,20 @@ export default {
       initParticles()
       animateParticles()
       window.addEventListener('resize', onResize)
+
+      // Escuchar primera interacción para arrancar el audio
+      window.addEventListener('click', startAudioOnInteraction)
+      window.addEventListener('keydown', startAudioOnInteraction)
+      window.addEventListener('touchstart', startAudioOnInteraction)
     })
 
     onUnmounted(() => {
       cancelAnimationFrame(animFrame)
       window.removeEventListener('resize', onResize)
+      window.removeEventListener('click', startAudioOnInteraction)
+      window.removeEventListener('keydown', startAudioOnInteraction)
+      window.removeEventListener('touchstart', startAudioOnInteraction)
+      stopBGM()
     })
 
     return {
@@ -223,8 +273,10 @@ export default {
       selectedCharacter,
       selectedStage,
       particleCanvas,
+      isMuted,
       goTo,
-      onSelectCharacter
+      onSelectCharacter,
+      handleToggleMute
     }
   }
 }
@@ -272,5 +324,38 @@ export default {
   inset: 0;
   pointer-events: none;
   z-index: 0;
+}
+
+/* Botón de Silencio Global */
+.audio-toggle-btn {
+  position: fixed;
+  top: 1.25rem;
+  right: 1.25rem;
+  z-index: 9999;
+  background: rgba(10, 10, 16, 0.78);
+  border: 1.5px solid var(--gold);
+  color: var(--gold-bright);
+  font-size: 1rem;
+  padding: 0.55rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  box-shadow:
+    0 4px 12px rgba(0, 0, 0, 0.55),
+    inset 0 0 10px rgba(200, 168, 75, 0.15);
+  border-radius: 4px;
+}
+
+.audio-toggle-btn:hover {
+  background: rgba(200, 168, 75, 0.22);
+  border-color: var(--gold-bright);
+  color: #fff;
+  transform: scale(1.08);
+}
+
+.audio-toggle-btn:active {
+  transform: scale(0.92);
 }
 </style>

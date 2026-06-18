@@ -17,7 +17,7 @@
 
     <!-- Imagen -->
     <div class="card-img-wrapper">
-      <img :src="char.image" :alt="char.name" class="char-img" />
+      <img :src="char.portrait || char.image" :alt="char.name" class="char-img" />
       <div class="img-gradient"></div>
     </div>
 
@@ -139,7 +139,7 @@ export default {
 }
 .char-img {
   width: 100%; height: 100%;
-  object-fit: cover; object-position: top center;
+  object-fit: contain; object-position: center;
   filter: brightness(0.85) contrast(1.1);
   transition: filter 0.4s, transform 0.5s;
 }

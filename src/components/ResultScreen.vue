@@ -41,13 +41,13 @@
 
       <!-- Botones -->
       <div class="result-buttons" :class="{ visible: btnsVisible }">
-        <button class="btn btn-primary" @click="emit('restart')">
+        <button class="btn btn-primary" @mouseenter="playSound('hover')" @click="emit('restart'); playSound('click')">
           ⚔ REVANCHA
         </button>
-        <button class="btn btn-secondary" @click="emit('go-to', 'select')">
+        <button class="btn btn-secondary" @mouseenter="playSound('hover')" @click="emit('go-to', 'select')">
           ◈ CAMBIAR PERSONAJE
         </button>
-        <button class="btn btn-secondary" @click="emit('go-to', 'home')">
+        <button class="btn btn-secondary" @mouseenter="playSound('hover')" @click="emit('go-to', 'home')">
           ⌂ MENÚ PRINCIPAL
         </button>
       </div>
@@ -58,6 +58,7 @@
 
 <script>
 import { ref, watch, onUnmounted } from 'vue'
+import { playSound } from '../modules/soundManager'
 
 export default {
   name: 'ResultScreen',
@@ -135,7 +136,7 @@ export default {
 
     onUnmounted(() => cancelAnimationFrame(confettiFrame))
 
-    return { textVisible, statsVisible, btnsVisible, confettiCanvas, emit }
+    return { textVisible, statsVisible, btnsVisible, confettiCanvas, emit, playSound }
   }
 }
 </script>

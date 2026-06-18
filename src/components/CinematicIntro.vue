@@ -38,6 +38,7 @@ export default {
   },
   setup() {
     function getCharacterSprite(character, state = 'idle') {
+      if (character?.portrait) return character.portrait
       const sprite = character?.sprites?.[state]
       if (Array.isArray(sprite)) return sprite[0] || character?.image || ''
       return sprite || character?.image || ''
@@ -57,7 +58,7 @@ export default {
   grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   align-items: center;
   gap: clamp(1rem, 4vw, 3rem);
-  padding: clamp(1rem, 4vw, 4rem);
+  padding: clamp(0.75rem, 3vh, 3rem) clamp(1rem, 4vw, 4rem);
   overflow: hidden;
   background:
     radial-gradient(circle at 20% 48%, rgba(200, 168, 75, 0.16), transparent 30%),
@@ -99,7 +100,7 @@ export default {
   position: relative;
   z-index: 2;
   display: grid;
-  grid-template-rows: minmax(220px, 52vh) auto;
+  grid-template-rows: minmax(180px, 48vh) auto;
   align-items: end;
   min-width: 0;
   opacity: 0;
@@ -128,6 +129,7 @@ export default {
   max-height: min(56vh, 560px);
   max-width: 100%;
   object-fit: contain;
+  object-position: center;
   filter: drop-shadow(0 0 34px rgba(0, 0, 0, 0.95));
   animation: introZoom 3.8s ease-out both;
 }
@@ -146,7 +148,8 @@ export default {
 }
 
 .intro-copy {
-  max-width: 390px;
+  width: 100%;
+  max-width: 440px;
   padding-top: 1rem;
 }
 
@@ -167,8 +170,8 @@ export default {
   display: block;
   margin: 0.25rem 0;
   font-family: var(--font-title);
-  font-size: clamp(1.6rem, 4vw, 3.2rem);
-  line-height: 0.95;
+  font-size: clamp(1.4rem, 3.2vw, 2.5rem);
+  line-height: 1.05;
   color: var(--gold-bright);
   text-shadow: 0 0 24px rgba(240, 208, 96, 0.5);
 }
